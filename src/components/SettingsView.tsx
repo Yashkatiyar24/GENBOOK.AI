@@ -95,11 +95,28 @@ const SettingsView: React.FC<SettingsViewProps> = ({ user }) => {
       }
 
       if (profileData) {
-        setProfile(profileData);
+        // Map the database fields to the component's expected fields
+        const mappedProfile: UserProfile = {
+          id: profileData.id,
+          full_name: profileData.full_name || '',
+          email: profileData.email || '',
+          phone: profileData.phone,
+          address: profileData.address,
+          date_of_birth: profileData.date_of_birth,
+          emergency_contact_name: profileData.emergency_contact_name,
+          emergency_contact_phone: profileData.emergency_contact_phone,
+          insurance_provider: profileData.insurance_provider,
+          insurance_number: profileData.insurance_number,
+          medical_conditions: profileData.medical_conditions,
+          allergies: profileData.allergies,
+          preferred_language: profileData.preferred_language || 'en',
+          timezone: profileData.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone,
+          avatar_url: profileData.avatar_url
+        };
+        setProfile(mappedProfile);
       } else {
         // Create default profile
         const defaultProfile: Partial<UserProfile> = {
-          id: user?.id,
           full_name: user?.user_metadata?.name || '',
           email: user?.email || '',
           preferred_language: 'en',
@@ -113,7 +130,27 @@ const SettingsView: React.FC<SettingsViewProps> = ({ user }) => {
           .single();
 
         if (error) throw error;
-        setProfile(data);
+        if (data) {
+          // Map the database fields to the component's expected fields
+          const mappedProfile: UserProfile = {
+            id: data.id,
+            full_name: data.full_name || '',
+            email: data.email || '',
+            phone: data.phone,
+            address: data.address,
+            date_of_birth: data.date_of_birth,
+            emergency_contact_name: data.emergency_contact_name,
+            emergency_contact_phone: data.emergency_contact_phone,
+            insurance_provider: data.insurance_provider,
+            insurance_number: data.insurance_number,
+            medical_conditions: data.medical_conditions,
+            allergies: data.allergies,
+            preferred_language: data.preferred_language || 'en',
+            timezone: data.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone,
+            avatar_url: data.avatar_url
+          };
+          setProfile(mappedProfile);
+        }
       }
 
       // Fetch notification settings
@@ -123,8 +160,24 @@ const SettingsView: React.FC<SettingsViewProps> = ({ user }) => {
         .eq('user_id', user?.id)
         .single();
 
+      if (notifError && notifError.code !== 'PGRST116') {
+        throw notifError;
+      }
+
       if (notifData) {
         setNotifications(notifData.notification_settings || notifications);
+      } else {
+        // Create default settings if they don't exist
+        const defaultSettings = {
+          user_id: user?.id,
+          notification_settings: notifications
+        };
+        
+        const { error: insertError } = await supabase
+          .from('user_settings')
+          .insert(defaultSettings);
+          
+        if (insertError) throw insertError;
       }
 
       // Fetch family members
@@ -133,7 +186,7 @@ const SettingsView: React.FC<SettingsViewProps> = ({ user }) => {
         .select('*')
         .eq('user_id', user?.id);
 
-      if (familyError) throw familyError;
+      if (familyError && familyError.code !== 'PGRST116') throw familyError;
       setFamilyMembers(familyData || []);
 
     } catch (error) {
@@ -148,13 +201,29 @@ const SettingsView: React.FC<SettingsViewProps> = ({ user }) => {
 
     try {
       setSaving(true);
+      // Map the component's fields to the database fields
+      const profileData = {
+        user_id: user?.id,
+        full_name: profile.full_name,
+        email: profile.email,
+        phone: profile.phone,
+        address: profile.address,
+        date_of_birth: profile.date_of_birth,
+        emergency_contact_name: profile.emergency_contact_name,
+        emergency_contact_phone: profile.emergency_contact_phone,
+        insurance_provider: profile.insurance_provider,
+        insurance_number: profile.insurance_number,
+        medical_conditions: profile.medical_conditions,
+        allergies: profile.allergies,
+        preferred_language: profile.preferred_language,
+        timezone: profile.timezone,
+        avatar_url: profile.avatar_url,
+        updated_at: new Date().toISOString()
+      };
+
       const { error } = await supabase
         .from('user_profiles')
-        .upsert({
-          ...profile,
-          user_id: user?.id,
-          updated_at: new Date().toISOString()
-        });
+        .upsert(profileData, { onConflict: 'user_id' });
 
       if (error) throw error;
       

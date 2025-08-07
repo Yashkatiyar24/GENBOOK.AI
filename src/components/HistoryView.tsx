@@ -62,11 +62,34 @@ const HistoryView: React.FC<HistoryViewProps> = ({ user }) => {
         .select('*')
         .eq('user_id', user?.id)
         .in('status', ['completed', 'cancelled', 'no-show'])
-        .lt('date', new Date().toISOString().split('T')[0])
-        .order('date', { ascending: false });
+        .lt('appointment_date', new Date().toISOString().split('T')[0])
+        .order('appointment_date', { ascending: false });
 
       if (error) throw error;
-      setAppointments(data || []);
+      // Map the database fields to the component's expected fields
+      const mappedAppointments = data?.map(apt => ({
+        id: apt.id,
+        title: apt.title,
+        description: apt.description,
+        date: apt.appointment_date,
+        time: apt.appointment_time,
+        duration: apt.duration_minutes,
+        doctor_name: apt.doctor_name || '',
+        doctor_specialty: apt.doctor_specialty,
+        location: apt.location,
+        appointment_type: apt.appointment_type || 'in-person',
+        status: apt.status,
+        priority: apt.priority || 'medium',
+        instructions: apt.instructions,
+        rating: apt.rating,
+        feedback: apt.feedback,
+        prescription: apt.prescription,
+        visit_summary: apt.visit_summary,
+        diagnosis: apt.diagnosis,
+        next_appointment_date: apt.next_appointment_date
+      })) || [];
+      
+      setAppointments(mappedAppointments);
     } catch (error) {
       console.error('Error fetching appointment history:', error);
     } finally {
