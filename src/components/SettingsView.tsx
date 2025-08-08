@@ -50,6 +50,59 @@ interface SettingsViewProps {
 const SettingsView: React.FC<SettingsViewProps> = ({ user }) => {
   const [activeTab, setActiveTab] = useState('profile');
   const [profile, setProfile] = useState<UserProfile | null>(null);
+  
+  // Initialize default profile when user is available
+  useEffect(() => {
+    if (user && !profile) {
+      const defaultProfile: UserProfile = {
+        id: '',
+        full_name: user?.user_metadata?.name || '',
+        email: user?.email || '',
+        phone: '',
+        address: '',
+        date_of_birth: '',
+        emergency_contact_name: '',
+        emergency_contact_phone: '',
+        insurance_provider: '',
+        insurance_number: '',
+        medical_conditions: '',
+        allergies: '',
+        preferred_language: 'en',
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        avatar_url: ''
+      };
+      setProfile(defaultProfile);
+    }
+  }, [user, profile]);
+  
+  // Helper function to update profile fields
+  const updateProfileField = (field: keyof UserProfile, value: string) => {
+    setProfile(prev => {
+      if (prev) {
+        return { ...prev, [field]: value };
+      } else {
+        // Create default profile if it doesn't exist
+        return {
+          id: '',
+          full_name: field === 'full_name' ? value : user?.user_metadata?.name || '',
+          email: field === 'email' ? value : user?.email || '',
+          phone: field === 'phone' ? value : '',
+          address: field === 'address' ? value : '',
+          date_of_birth: field === 'date_of_birth' ? value : '',
+          emergency_contact_name: field === 'emergency_contact_name' ? value : '',
+          emergency_contact_phone: field === 'emergency_contact_phone' ? value : '',
+          insurance_provider: field === 'insurance_provider' ? value : '',
+          insurance_number: field === 'insurance_number' ? value : '',
+          medical_conditions: field === 'medical_conditions' ? value : '',
+          allergies: field === 'allergies' ? value : '',
+          preferred_language: field === 'preferred_language' ? value : 'en',
+          timezone: field === 'timezone' ? value : Intl.DateTimeFormat().resolvedOptions().timeZone,
+          avatar_url: field === 'avatar_url' ? value : ''
+        };
+      }
+    });
+  };
+  
   const [notifications, setNotifications] = useState<NotificationSettings>({
     email_appointments: true,
     email_reminders: true,
@@ -204,20 +257,20 @@ const SettingsView: React.FC<SettingsViewProps> = ({ user }) => {
       // Map the component's fields to the database fields
       const profileData = {
         user_id: user?.id,
-        full_name: profile.full_name,
-        email: profile.email,
-        phone: profile.phone,
-        address: profile.address,
-        date_of_birth: profile.date_of_birth,
-        emergency_contact_name: profile.emergency_contact_name,
-        emergency_contact_phone: profile.emergency_contact_phone,
-        insurance_provider: profile.insurance_provider,
-        insurance_number: profile.insurance_number,
-        medical_conditions: profile.medical_conditions,
-        allergies: profile.allergies,
-        preferred_language: profile.preferred_language,
-        timezone: profile.timezone,
-        avatar_url: profile.avatar_url,
+        full_name: profile.full_name || null,
+        email: profile.email || null,
+        phone: profile.phone || null,
+        address: profile.address || null,
+        date_of_birth: profile.date_of_birth || null,
+        emergency_contact_name: profile.emergency_contact_name || null,
+        emergency_contact_phone: profile.emergency_contact_phone || null,
+        insurance_provider: profile.insurance_provider || null,
+        insurance_number: profile.insurance_number || null,
+        medical_conditions: profile.medical_conditions || null,
+        allergies: profile.allergies || null,
+        preferred_language: profile.preferred_language || 'en',
+        timezone: profile.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone,
+        avatar_url: profile.avatar_url || null,
         updated_at: new Date().toISOString()
       };
 
@@ -407,7 +460,7 @@ const SettingsView: React.FC<SettingsViewProps> = ({ user }) => {
                       <input
                         type="text"
                         value={profile?.full_name || ''}
-                        onChange={(e) => setProfile(prev => prev ? { ...prev, full_name: e.target.value } : null)}
+                        onChange={(e) => updateProfileField('full_name', e.target.value)}
                         className="w-full bg-black/30 border border-cyan-500/20 rounded-lg px-3 py-2 focus:outline-none focus:border-cyan-400/50"
                       />
                     </div>
@@ -416,7 +469,7 @@ const SettingsView: React.FC<SettingsViewProps> = ({ user }) => {
                       <input
                         type="email"
                         value={profile?.email || ''}
-                        onChange={(e) => setProfile(prev => prev ? { ...prev, email: e.target.value } : null)}
+                        onChange={(e) => updateProfileField('email', e.target.value)}
                         className="w-full bg-black/30 border border-cyan-500/20 rounded-lg px-3 py-2 focus:outline-none focus:border-cyan-400/50"
                       />
                     </div>
@@ -425,7 +478,7 @@ const SettingsView: React.FC<SettingsViewProps> = ({ user }) => {
                       <input
                         type="tel"
                         value={profile?.phone || ''}
-                        onChange={(e) => setProfile(prev => prev ? { ...prev, phone: e.target.value } : null)}
+                        onChange={(e) => updateProfileField('phone', e.target.value)}
                         className="w-full bg-black/30 border border-cyan-500/20 rounded-lg px-3 py-2 focus:outline-none focus:border-cyan-400/50"
                       />
                     </div>
@@ -434,7 +487,7 @@ const SettingsView: React.FC<SettingsViewProps> = ({ user }) => {
                       <input
                         type="date"
                         value={profile?.date_of_birth || ''}
-                        onChange={(e) => setProfile(prev => prev ? { ...prev, date_of_birth: e.target.value } : null)}
+                        onChange={(e) => updateProfileField('date_of_birth', e.target.value)}
                         className="w-full bg-black/30 border border-cyan-500/20 rounded-lg px-3 py-2 focus:outline-none focus:border-cyan-400/50"
                       />
                     </div>
@@ -442,7 +495,7 @@ const SettingsView: React.FC<SettingsViewProps> = ({ user }) => {
                       <label className="block text-sm font-medium text-gray-400 mb-2">Address</label>
                       <textarea
                         value={profile?.address || ''}
-                        onChange={(e) => setProfile(prev => prev ? { ...prev, address: e.target.value } : null)}
+                        onChange={(e) => updateProfileField('address', e.target.value)}
                         className="w-full bg-black/30 border border-cyan-500/20 rounded-lg px-3 py-2 focus:outline-none focus:border-cyan-400/50 h-20 resize-none"
                       />
                     </div>
@@ -457,7 +510,7 @@ const SettingsView: React.FC<SettingsViewProps> = ({ user }) => {
                       <input
                         type="text"
                         value={profile?.emergency_contact_name || ''}
-                        onChange={(e) => setProfile(prev => prev ? { ...prev, emergency_contact_name: e.target.value } : null)}
+                        onChange={(e) => updateProfileField('emergency_contact_name', e.target.value)}
                         className="w-full bg-black/30 border border-cyan-500/20 rounded-lg px-3 py-2 focus:outline-none focus:border-cyan-400/50"
                       />
                     </div>
@@ -466,7 +519,7 @@ const SettingsView: React.FC<SettingsViewProps> = ({ user }) => {
                       <input
                         type="tel"
                         value={profile?.emergency_contact_phone || ''}
-                        onChange={(e) => setProfile(prev => prev ? { ...prev, emergency_contact_phone: e.target.value } : null)}
+                        onChange={(e) => updateProfileField('emergency_contact_phone', e.target.value)}
                         className="w-full bg-black/30 border border-cyan-500/20 rounded-lg px-3 py-2 focus:outline-none focus:border-cyan-400/50"
                       />
                     </div>
@@ -481,7 +534,7 @@ const SettingsView: React.FC<SettingsViewProps> = ({ user }) => {
                       <input
                         type="text"
                         value={profile?.insurance_provider || ''}
-                        onChange={(e) => setProfile(prev => prev ? { ...prev, insurance_provider: e.target.value } : null)}
+                        onChange={(e) => updateProfileField('insurance_provider', e.target.value)}
                         className="w-full bg-black/30 border border-cyan-500/20 rounded-lg px-3 py-2 focus:outline-none focus:border-cyan-400/50"
                       />
                     </div>
@@ -490,7 +543,7 @@ const SettingsView: React.FC<SettingsViewProps> = ({ user }) => {
                       <input
                         type="text"
                         value={profile?.insurance_number || ''}
-                        onChange={(e) => setProfile(prev => prev ? { ...prev, insurance_number: e.target.value } : null)}
+                        onChange={(e) => updateProfileField('insurance_number', e.target.value)}
                         className="w-full bg-black/30 border border-cyan-500/20 rounded-lg px-3 py-2 focus:outline-none focus:border-cyan-400/50"
                       />
                     </div>
@@ -504,7 +557,7 @@ const SettingsView: React.FC<SettingsViewProps> = ({ user }) => {
                       <label className="block text-sm font-medium text-gray-400 mb-2">Medical Conditions</label>
                       <textarea
                         value={profile?.medical_conditions || ''}
-                        onChange={(e) => setProfile(prev => prev ? { ...prev, medical_conditions: e.target.value } : null)}
+                        onChange={(e) => updateProfileField('medical_conditions', e.target.value)}
                         className="w-full bg-black/30 border border-cyan-500/20 rounded-lg px-3 py-2 focus:outline-none focus:border-cyan-400/50 h-20 resize-none"
                         placeholder="List any ongoing medical conditions..."
                       />
@@ -513,7 +566,7 @@ const SettingsView: React.FC<SettingsViewProps> = ({ user }) => {
                       <label className="block text-sm font-medium text-gray-400 mb-2">Allergies</label>
                       <textarea
                         value={profile?.allergies || ''}
-                        onChange={(e) => setProfile(prev => prev ? { ...prev, allergies: e.target.value } : null)}
+                        onChange={(e) => updateProfileField('allergies', e.target.value)}
                         className="w-full bg-black/30 border border-cyan-500/20 rounded-lg px-3 py-2 focus:outline-none focus:border-cyan-400/50 h-20 resize-none"
                         placeholder="List any known allergies..."
                       />

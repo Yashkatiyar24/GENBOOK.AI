@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, Clock, Users, Settings, Search, Plus, Mic, BarChart3, ChevronLeft, ChevronRight, X, LogOut, User, History, Bot, Zap, Sparkles, Brain, Activity } from 'lucide-react';
+import { Calendar, Clock, Users, Settings, Search, Plus, Mic, ChevronLeft, ChevronRight, X, LogOut, User, Bot, Zap, Sparkles, Brain, Activity } from 'lucide-react';
 import NewAppointmentForm from './NewAppointmentForm';
 import AuthModal from './components/AuthModal';
 import ScheduleView from './components/ScheduleView';
 import HistoryView from './components/HistoryView';
 import SettingsView from './components/SettingsView';
-import { supabase, getAISuggestedTimes, checkAppointmentConflicts, predictNoShowProbability } from './supabase';
+import { supabase } from './supabase';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
 
 interface Appointment {
@@ -31,9 +31,6 @@ function App() {
   const [activeTab, setActiveTab] = useState('Dashboard');
   const [showNewAppointment, setShowNewAppointment] = useState(false);
   const [showVoiceCommand, setShowVoiceCommand] = useState(false);
-  const [showReports, setShowReports] = useState(false);
-  const [showContacts, setShowContacts] = useState(false);
-  
   // Authentication state
   const [user, setUser] = useState<SupabaseUser | null>(null);
   const [showAuthModal, setShowAuthModal] = useState(false);
@@ -55,8 +52,14 @@ function App() {
   // Authentication effect
   useEffect(() => {
     // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(({ data: { session }, error }) => {
+      if (error) {
+        console.error('Error getting session:', error);
+      }
       setUser(session?.user ?? null);
+      setLoading(false);
+    }).catch(err => {
+      console.error('Error in getSession:', err);
       setLoading(false);
     });
 
@@ -131,13 +134,6 @@ function App() {
     setTimeout(() => setShowVoiceCommand(false), 3000);
   };
 
-  const handleViewReports = () => {
-    setShowReports(true);
-  };
-
-  const handleManageContacts = () => {
-    setShowContacts(true);
-  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#0a0a0a] via-[#0f172a] to-[#1a1a2e] text-white">
@@ -515,57 +511,6 @@ function App() {
           </div>
         )}
 
-        {showReports && (
-          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
-            <div className="bg-black/80 backdrop-blur-xl border border-cyan-500/20 rounded-2xl p-8 max-w-2xl w-full mx-4">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-xl font-bold">Reports</h3>
-                <button
-                  onClick={() => setShowReports(false)}
-                  className="p-2 hover:bg-cyan-500/20 rounded-lg transition-colors"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-              <div className="space-y-4">
-                <div className="bg-black/30 p-4 rounded-lg">
-                  <h4 className="font-medium mb-2">This Week</h4>
-                  <p className="text-2xl font-bold text-cyan-400">12 appointments</p>
-                </div>
-                <div className="bg-black/30 p-4 rounded-lg">
-                  <h4 className="font-medium mb-2">This Month</h4>
-                  <p className="text-2xl font-bold text-cyan-400">48 appointments</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {showContacts && (
-          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
-            <div className="bg-black/80 backdrop-blur-xl border border-cyan-500/20 rounded-2xl p-8 max-w-2xl w-full mx-4">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-xl font-bold">Manage Contacts</h3>
-                <button
-                  onClick={() => setShowContacts(false)}
-                  className="p-2 hover:bg-cyan-500/20 rounded-lg transition-colors"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-              <div className="space-y-4">
-                <div className="bg-black/30 p-4 rounded-lg">
-                  <h4 className="font-medium">John Smith</h4>
-                  <p className="text-sm text-gray-400">john.smith@company.com</p>
-                </div>
-                <div className="bg-black/30 p-4 rounded-lg">
-                  <h4 className="font-medium">Sarah Johnson</h4>
-                  <p className="text-sm text-gray-400">sarah.j@company.com</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
 
         {/* Authentication Modal */}
         <AuthModal

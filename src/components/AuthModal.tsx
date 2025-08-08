@@ -61,7 +61,13 @@ const AuthModal: React.FC<AuthModalProps> = ({
       });
 
       if (error) {
-        setError(error.message);
+        console.error('Sign in error:', error);
+        setError(error.message || 'Failed to sign in. Please check your credentials and try again.');
+        return;
+      }
+
+      if (!data.user) {
+        setError('Authentication failed. Please try again.');
         return;
       }
 
@@ -117,31 +123,40 @@ const AuthModal: React.FC<AuthModalProps> = ({
       });
 
       if (error) {
-        setError(error.message);
+        console.error('Sign up error:', error);
+        setError(error.message || 'Failed to create account. Please try again.');
         return;
       }
 
       // If signup successful, send welcome email and auto-login
       if (data.user) {
-        // Send welcome email
-        await sendWelcomeEmail(signUpData.email, signUpData.name);
+        try {
+          // Send welcome email
+          await sendWelcomeEmail(signUpData.email, signUpData.name);
+        } catch (emailError) {
+          console.warn('Failed to send welcome email:', emailError);
+          // Continue with signup even if email fails
+        }
         
         // Auto-login the user immediately
-        const { error: signInError } = await supabase.auth.signInWithPassword({
+        const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
           email: signUpData.email,
           password: signUpData.password
         });
 
         if (signInError) {
+          console.error('Auto-login error:', signInError);
           // If auto-login fails, show success message and switch to sign-in
-          setSuccess('Account created successfully! A welcome email has been sent to you. Please sign in.');
+          setSuccess('Account created successfully! Please sign in with your credentials.');
           setTimeout(() => {
             onModeChange('signin');
             setSuccess(null);
           }, 3000);
+        } else if (!signInData.user) {
+          setError('Account created but login failed. Please try signing in manually.');
         } else {
           // Auto-login successful
-          setSuccess('Welcome to GENBOOK.AI! Your account has been created and verified. A welcome email has been sent to you.');
+          setSuccess('Welcome to GENBOOK.AI! Your account has been created successfully.');
           
           // Show welcome email preview in development
           if (process.env.NODE_ENV === 'development') {
@@ -155,6 +170,8 @@ const AuthModal: React.FC<AuthModalProps> = ({
             onClose();
           }, 2500);
         }
+      } else {
+        setError('Failed to create account. Please try again.');
       }
 
     } catch (err) {
