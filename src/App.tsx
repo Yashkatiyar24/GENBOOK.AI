@@ -1,10 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, Clock, Users, Settings, Search, Plus, Mic, ChevronLeft, ChevronRight, X, LogOut, User, Bot, Zap, Sparkles, Brain, Activity } from 'lucide-react';
+import { Calendar, Clock, Users, Settings, Search, Plus, Mic, ChevronLeft, ChevronRight, X, LogOut, User, Bot, Zap, Sparkles, Brain, Activity, CreditCard, Building } from 'lucide-react';
 import NewAppointmentForm from './NewAppointmentForm';
 import AuthModal from './components/AuthModal';
 import ScheduleView from './components/ScheduleView';
 import HistoryView from './components/HistoryView';
 import SettingsView from './components/SettingsView';
+import BillingView from './components/BillingView';
+import TeamView from './components/TeamView';
+import OrganizationSettings from './components/OrganizationSettings';
+import ChatBot from './components/ChatBot';
 import { supabase } from './supabase';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
 
@@ -136,8 +140,8 @@ function App() {
 
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#0a0a0a] via-[#0f172a] to-[#1a1a2e] text-white">
-      <div className="flex h-screen">
+    <div className="h-screen bg-gradient-to-br from-[#0a0a0a] via-[#0f172a] to-[#1a1a2e] text-white overflow-hidden">
+      <div className="flex h-full">
         {/* Left Sidebar */}
         <aside className="w-80 bg-black/20 backdrop-blur-xl border-r border-cyan-500/10 p-6 flex flex-col">
           <div className="mb-8">
@@ -163,6 +167,9 @@ function App() {
               { icon: Clock, label: 'Schedule' },
               { icon: Users, label: 'History' },
               { icon: Settings, label: 'Settings' },
+              { icon: CreditCard, label: 'Billing' },
+              { icon: Users, label: 'Team' },
+              { icon: Building, label: 'Organization' },
             ].map((item) => (
               <button
                 key={item.label}
@@ -195,12 +202,12 @@ function App() {
         </aside>
 
         {/* Main Content */}
-        <main className="flex-1">
+        <main className="flex-1 flex flex-col overflow-hidden">
           {activeTab === 'Dashboard' && (
-            <div className="flex">
+            <div className="flex h-full">
               {/* Calendar Panel */}
-              <div className="flex-1 p-8">
-                <div className="bg-black/20 backdrop-blur-xl rounded-2xl p-6 border border-cyan-500/10">
+              <div className="flex-1 p-8 flex flex-col">
+                <div className="bg-black/20 backdrop-blur-xl rounded-2xl p-6 border border-cyan-500/10 flex-1 flex flex-col">
                   <div className="flex items-center justify-between mb-6">
                     <h2 className="text-2xl font-bold">Calendar Overview</h2>
                     <div className="flex items-center space-x-4">
@@ -265,53 +272,55 @@ function App() {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-7 gap-2">
-                    {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
-                      <div key={day} className="text-center text-sm text-gray-400 py-2">
-                        {day}
-                      </div>
-                    ))}
-                    {getDaysInMonth(currentDate).map((day, index) => (
-                      <div
-                        key={index}
-                        className={`aspect-square flex items-center justify-center rounded-xl cursor-pointer transition-all duration-300 ${
-                          day
-                            ? selectedDate?.toDateString() === day.toDateString()
-                              ? 'bg-cyan-500/30 text-cyan-400 shadow-[0_0_20px_rgba(6,182,212,0.5)]'
-                              : 'hover:bg-cyan-500/10 hover:shadow-[0_0_15px_rgba(6,182,212,0.2)]'
-                            : ''
-                        }`}
-                        onClick={() => day && setSelectedDate(day)}
-                      >
-                        {day && (
-                          <div className="relative">
-                            <span className="text-sm">{day.getDate()}</span>
-                            {appointments.some(a => new Date(a.date).toDateString() === day.toDateString()) && (
-                              <div className="absolute -top-1 -right-1 w-2 h-2 bg-cyan-400 rounded-full animate-pulse" />
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    ))}
+                  <div className="flex-1 flex flex-col justify-center">
+                    <div className="grid grid-cols-7 gap-1">
+                      {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
+                        <div key={day} className="text-center text-xs text-gray-400 py-1">
+                          {day}
+                        </div>
+                      ))}
+                      {getDaysInMonth(currentDate).map((day, index) => (
+                        <div
+                          key={index}
+                          className={`w-8 h-8 flex items-center justify-center rounded-lg cursor-pointer transition-all duration-300 ${
+                            day
+                              ? selectedDate?.toDateString() === day.toDateString()
+                                ? 'bg-cyan-500/30 text-cyan-400 shadow-[0_0_15px_rgba(6,182,212,0.4)]'
+                                : 'hover:bg-cyan-500/10 hover:shadow-[0_0_10px_rgba(6,182,212,0.2)]'
+                              : ''
+                          }`}
+                          onClick={() => day && setSelectedDate(day)}
+                        >
+                          {day && (
+                            <div className="relative">
+                              <span className="text-xs">{day.getDate()}</span>
+                              {appointments.some(a => new Date(a.date).toDateString() === day.toDateString()) && (
+                                <div className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 bg-cyan-400 rounded-full animate-pulse" />
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 </div>
 
                 {/* AI-Enhanced Quick Actions */}
-                <div className={`mt-8 space-y-6`}>
+                <div className={`mt-4 space-y-4`}>
                   {/* Primary Quick Actions */}
-                  <div className={`grid ${user ? 'grid-cols-2 md:grid-cols-4' : 'grid-cols-3'} gap-4`}>
+                  <div className={`grid ${user ? 'grid-cols-2 md:grid-cols-4' : 'grid-cols-3'} gap-3`}>
                     {user && (
                       <button
                         onClick={handleNewAppointment}
-                        className="group bg-gradient-to-br from-cyan-500/10 to-blue-500/10 backdrop-blur-xl border border-cyan-500/30 rounded-2xl p-6 hover:border-cyan-400/60 hover:shadow-[0_0_30px_rgba(6,182,212,0.4)] transition-all duration-300 transform hover:scale-105"
+                        className="group bg-gradient-to-br from-cyan-500/10 to-blue-500/10 backdrop-blur-xl border border-cyan-500/30 rounded-xl p-4 hover:border-cyan-400/60 hover:shadow-[0_0_20px_rgba(6,182,212,0.4)] transition-all duration-300 transform hover:scale-105"
                       >
-                        <div className="flex flex-col items-center space-y-3">
-                          <div className="w-14 h-14 rounded-xl bg-gradient-to-r from-cyan-400 to-blue-500 flex items-center justify-center group-hover:scale-110 transition-transform duration-300 shadow-lg">
-                            <Plus className="w-7 h-7 text-black" />
+                        <div className="flex flex-col items-center space-y-2">
+                          <div className="w-10 h-10 rounded-lg bg-gradient-to-r from-cyan-400 to-blue-500 flex items-center justify-center group-hover:scale-110 transition-transform duration-300 shadow-lg">
+                            <Plus className="w-5 h-5 text-black" />
                           </div>
                           <div className="text-center">
-                            <span className="text-sm font-semibold text-white">New Appointment</span>
-                            <p className="text-xs text-cyan-300 mt-1">AI-powered scheduling</p>
+                            <span className="text-xs font-semibold text-white">New Appointment</span>
+                            <p className="text-xs text-cyan-300 mt-0.5">AI-powered scheduling</p>
                           </div>
                         </div>
                       </button>
@@ -319,63 +328,63 @@ function App() {
 
                     <button
                       onClick={() => setActiveTab('Schedule')}
-                      className="group bg-gradient-to-br from-purple-500/10 to-pink-500/10 backdrop-blur-xl border border-purple-500/30 rounded-2xl p-6 hover:border-purple-400/60 hover:shadow-[0_0_30px_rgba(168,85,247,0.4)] transition-all duration-300 transform hover:scale-105"
+                      className="group bg-gradient-to-br from-purple-500/10 to-pink-500/10 backdrop-blur-xl border border-purple-500/30 rounded-xl p-4 hover:border-purple-400/60 hover:shadow-[0_0_20px_rgba(168,85,247,0.4)] transition-all duration-300 transform hover:scale-105"
                     >
-                      <div className="flex flex-col items-center space-y-3">
-                        <div className="w-14 h-14 rounded-xl bg-gradient-to-r from-purple-400 to-pink-500 flex items-center justify-center group-hover:scale-110 transition-transform duration-300 shadow-lg">
-                          <Clock className="w-7 h-7 text-black" />
+                      <div className="flex flex-col items-center space-y-2">
+                        <div className="w-10 h-10 rounded-lg bg-gradient-to-r from-purple-400 to-pink-500 flex items-center justify-center group-hover:scale-110 transition-transform duration-300 shadow-lg">
+                          <Clock className="w-5 h-5 text-black" />
                         </div>
                         <div className="text-center">
-                          <span className="text-sm font-semibold text-white">Smart Schedule</span>
-                          <p className="text-xs text-purple-300 mt-1">View & manage bookings</p>
+                          <span className="text-xs font-semibold text-white">Smart Schedule</span>
+                          <p className="text-xs text-purple-300 mt-0.5">View & manage bookings</p>
                         </div>
                       </div>
                     </button>
 
                     <button
                       onClick={handleVoiceCommand}
-                      className="group bg-gradient-to-br from-green-500/10 to-emerald-500/10 backdrop-blur-xl border border-green-500/30 rounded-2xl p-6 hover:border-green-400/60 hover:shadow-[0_0_30px_rgba(34,197,94,0.4)] transition-all duration-300 transform hover:scale-105"
+                      className="group bg-gradient-to-br from-green-500/10 to-emerald-500/10 backdrop-blur-xl border border-green-500/30 rounded-xl p-4 hover:border-green-400/60 hover:shadow-[0_0_20px_rgba(34,197,94,0.4)] transition-all duration-300 transform hover:scale-105"
                     >
-                      <div className="flex flex-col items-center space-y-3">
-                        <div className="w-14 h-14 rounded-xl bg-gradient-to-r from-green-400 to-emerald-500 flex items-center justify-center group-hover:scale-110 transition-transform duration-300 shadow-lg">
-                          <Mic className="w-7 h-7 text-black" />
+                      <div className="flex flex-col items-center space-y-2">
+                        <div className="w-10 h-10 rounded-lg bg-gradient-to-r from-green-400 to-emerald-500 flex items-center justify-center group-hover:scale-110 transition-transform duration-300 shadow-lg">
+                          <Mic className="w-5 h-5 text-black" />
                         </div>
                         <div className="text-center">
-                          <span className="text-sm font-semibold text-white">Voice Commands</span>
-                          <p className="text-xs text-green-300 mt-1">Book with voice</p>
+                          <span className="text-xs font-semibold text-white">Voice Commands</span>
+                          <p className="text-xs text-green-300 mt-0.5">Book with voice</p>
                         </div>
                       </div>
                     </button>
 
                     <button
                       onClick={() => setActiveTab('Settings')}
-                      className="group bg-gradient-to-br from-orange-500/10 to-red-500/10 backdrop-blur-xl border border-orange-500/30 rounded-2xl p-6 hover:border-orange-400/60 hover:shadow-[0_0_30px_rgba(251,146,60,0.4)] transition-all duration-300 transform hover:scale-105"
+                      className="group bg-gradient-to-br from-orange-500/10 to-red-500/10 backdrop-blur-xl border border-orange-500/30 rounded-xl p-4 hover:border-orange-400/60 hover:shadow-[0_0_20px_rgba(251,146,60,0.4)] transition-all duration-300 transform hover:scale-105"
                     >
-                      <div className="flex flex-col items-center space-y-3">
-                        <div className="w-14 h-14 rounded-xl bg-gradient-to-r from-orange-400 to-red-500 flex items-center justify-center group-hover:scale-110 transition-transform duration-300 shadow-lg">
-                          <Settings className="w-7 h-7 text-black" />
+                      <div className="flex flex-col items-center space-y-2">
+                        <div className="w-10 h-10 rounded-lg bg-gradient-to-r from-orange-400 to-red-500 flex items-center justify-center group-hover:scale-110 transition-transform duration-300 shadow-lg">
+                          <Settings className="w-5 h-5 text-black" />
                         </div>
                         <div className="text-center">
-                          <span className="text-sm font-semibold text-white">Smart Settings</span>
-                          <p className="text-xs text-orange-300 mt-1">AI preferences</p>
+                          <span className="text-xs font-semibold text-white">Smart Settings</span>
+                          <p className="text-xs text-orange-300 mt-0.5">AI preferences</p>
                         </div>
                       </div>
                     </button>
                   </div>
                   
                   {/* AI Insights Panel */}
-                  <div className="bg-gradient-to-br from-indigo-500/10 to-purple-500/10 backdrop-blur-xl border border-indigo-500/20 rounded-2xl p-6">
-                    <div className="flex items-center space-x-3 mb-4">
-                      <div className="w-10 h-10 rounded-lg bg-gradient-to-r from-indigo-400 to-purple-500 flex items-center justify-center">
-                        <Brain className="w-5 h-5 text-black" />
+                  <div className="bg-gradient-to-br from-indigo-500/10 to-purple-500/10 backdrop-blur-xl border border-indigo-500/20 rounded-xl p-4">
+                    <div className="flex items-center space-x-2 mb-3">
+                      <div className="w-8 h-8 rounded-lg bg-gradient-to-r from-indigo-400 to-purple-500 flex items-center justify-center">
+                        <Brain className="w-4 h-4 text-black" />
                       </div>
                       <div>
-                        <h3 className="text-lg font-semibold text-white">AI Insights</h3>
-                        <p className="text-sm text-indigo-300">Powered by advanced scheduling intelligence</p>
+                        <h3 className="text-sm font-semibold text-white">AI Insights</h3>
+                        <p className="text-xs text-indigo-300">Powered by advanced scheduling intelligence</p>
                       </div>
                     </div>
                     
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                       <div className="bg-black/20 rounded-xl p-4 border border-indigo-500/20">
                         <div className="flex items-center space-x-2 mb-2">
                           <Activity className="w-4 h-4 text-green-400" />
@@ -489,6 +498,9 @@ function App() {
           {activeTab === 'Schedule' && <ScheduleView user={user} />}
           {activeTab === 'History' && <HistoryView user={user} />}
           {activeTab === 'Settings' && <SettingsView user={user} />}
+          {activeTab === 'Billing' && <BillingView user={user} />}
+          {activeTab === 'Team' && <TeamView user={user} />}
+          {activeTab === 'Organization' && <OrganizationSettings user={user} />}
         </main>
 
         {/* Modals */}
@@ -520,6 +532,9 @@ function App() {
           onModeChange={setAuthMode}
           onAuthSuccess={handleAuthSuccess}
         />
+
+        {/* Floating ChatBot Widget */}
+        <ChatBot user={user} />
       </div>
     </div>
   );

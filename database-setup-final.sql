@@ -1,5 +1,9 @@
--- Enhanced Database Schema for GENBOOK.AI (PostgreSQL Compatible - Final Version)
--- This script adds all necessary tables and functions for the comprehensive appointment management system
+-- GENBOOK.AI SaaS Database Setup - Complete Schema
+-- This file contains the complete database schema for the SaaS version
+-- Run this on a fresh Supabase project
+
+-- Enable necessary extensions
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 -- Create user_profiles table (if not exists)
 CREATE TABLE IF NOT EXISTS user_profiles (
@@ -396,4 +400,374 @@ BEGIN
     RAISE NOTICE 'All RLS policies and triggers are in place.';
     RAISE NOTICE 'Automatic field updates enabled for appointments.';
     RAISE NOTICE 'You can now use the comprehensive appointment management features.';
+END $$;
+
+-- ========================================
+-- SAAS MULTITENANCY SCHEMA ADDITION
+-- ========================================
+
+-- 1. Create organizations table
+CREATE TABLE IF NOT EXISTS organizations (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    slug VARCHAR(100) UNIQUE NOT NULL,
+    domain VARCHAR(255),
+    logo_url TEXT,
+    primary_color VARCHAR(7) DEFAULT '#06B6D4', -- Default cyan color
+    subscription_status VARCHAR(50) DEFAULT 'trial', -- trial, active, cancelled, past_due
+    subscription_plan VARCHAR(50) DEFAULT 'starter', -- starter, professional, enterprise
+    stripe_customer_id VARCHAR(255),
+    stripe_subscription_id VARCHAR(255),
+    trial_ends_at TIMESTAMP WITH TIME ZONE DEFAULT (NOW() + INTERVAL '14 days'),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- 2. Create subscriptions table for billing
+CREATE TABLE IF NOT EXISTS subscriptions (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+    stripe_subscription_id VARCHAR(255) UNIQUE NOT NULL,
+    stripe_customer_id VARCHAR(255) NOT NULL,
+    status VARCHAR(50) NOT NULL, -- active, cancelled, past_due, etc.
+    plan_name VARCHAR(100) NOT NULL,
+    plan_amount INTEGER NOT NULL, -- in cents
+    currency VARCHAR(3) DEFAULT 'USD',
+    current_period_start TIMESTAMP WITH TIME ZONE NOT NULL,
+    current_period_end TIMESTAMP WITH TIME ZONE NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- 3. Create payments table for transaction history
+CREATE TABLE IF NOT EXISTS payments (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+    stripe_payment_intent_id VARCHAR(255) UNIQUE NOT NULL,
+    amount INTEGER NOT NULL, -- in cents
+    currency VARCHAR(3) DEFAULT 'USD',
+    status VARCHAR(50) NOT NULL, -- succeeded, failed, pending
+    description TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- 4. Create user roles and team management
+CREATE TYPE user_role AS ENUM ('admin', 'staff', 'viewer');
+
+CREATE TABLE IF NOT EXISTS organization_members (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    role user_role DEFAULT 'staff',
+    invited_by UUID REFERENCES auth.users(id),
+    invited_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    joined_at TIMESTAMP WITH TIME ZONE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    UNIQUE(organization_id, user_id)
+);
+
+-- 5. Create invitations table
+CREATE TABLE IF NOT EXISTS invitations (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+    email VARCHAR(255) NOT NULL,
+    role user_role DEFAULT 'staff',
+    token VARCHAR(255) UNIQUE NOT NULL,
+    invited_by UUID NOT NULL REFERENCES auth.users(id),
+    expires_at TIMESTAMP WITH TIME ZONE DEFAULT (NOW() + INTERVAL '7 days'),
+    accepted_at TIMESTAMP WITH TIME ZONE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    UNIQUE(organization_id, email)
+);
+
+-- 6. Create bot_settings table for chatbot customization
+CREATE TABLE IF NOT EXISTS bot_settings (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+    bot_name VARCHAR(100) DEFAULT 'GENBOOK Assistant',
+    welcome_message TEXT DEFAULT 'Hi! I''m your GENBOOK Assistant. I can help you book appointments, check availability, or answer questions about the platform. How can I help you today?',
+    primary_color VARCHAR(7) DEFAULT '#06B6D4',
+    is_enabled BOOLEAN DEFAULT true,
+    monthly_message_limit INTEGER DEFAULT 1000,
+    messages_used_this_month INTEGER DEFAULT 0,
+    last_reset_date DATE DEFAULT CURRENT_DATE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    UNIQUE(organization_id)
+);
+
+-- 7. Add organization_id to existing tables
+DO $$
+BEGIN
+    -- Add organization_id column to user_profiles
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'user_profiles' AND column_name = 'organization_id') THEN
+        ALTER TABLE user_profiles ADD COLUMN organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE;
+    END IF;
+
+    -- Add organization_id column to appointments
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'appointments' AND column_name = 'organization_id') THEN
+        ALTER TABLE appointments ADD COLUMN organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE;
+    END IF;
+
+    -- Add organization_id column to contacts
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'contacts' AND column_name = 'organization_id') THEN
+        ALTER TABLE contacts ADD COLUMN organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE;
+    END IF;
+
+    -- Add organization_id column to user_settings
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'user_settings' AND column_name = 'organization_id') THEN
+        ALTER TABLE user_settings ADD COLUMN organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE;
+    END IF;
+
+    -- Add organization_id column to family_members
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'family_members' AND column_name = 'organization_id') THEN
+        ALTER TABLE family_members ADD COLUMN organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE;
+    END IF;
+END $$;
+
+-- 8. Create indexes for performance
+CREATE INDEX IF NOT EXISTS idx_organizations_slug ON organizations(slug);
+CREATE INDEX IF NOT EXISTS idx_organizations_stripe_customer ON organizations(stripe_customer_id);
+CREATE INDEX IF NOT EXISTS idx_subscriptions_org_id ON subscriptions(organization_id);
+CREATE INDEX IF NOT EXISTS idx_payments_org_id ON payments(organization_id);
+CREATE INDEX IF NOT EXISTS idx_org_members_org_id ON organization_members(organization_id);
+CREATE INDEX IF NOT EXISTS idx_org_members_user_id ON organization_members(user_id);
+CREATE INDEX IF NOT EXISTS idx_invitations_token ON invitations(token);
+CREATE INDEX IF NOT EXISTS idx_invitations_email ON invitations(email);
+CREATE INDEX IF NOT EXISTS idx_bot_settings_org_id ON bot_settings(organization_id);
+
+-- Add indexes to existing tables for organization_id
+CREATE INDEX IF NOT EXISTS idx_user_profiles_org_id ON user_profiles(organization_id);
+CREATE INDEX IF NOT EXISTS idx_appointments_org_id ON appointments(organization_id);
+CREATE INDEX IF NOT EXISTS idx_contacts_org_id ON contacts(organization_id);
+CREATE INDEX IF NOT EXISTS idx_user_settings_org_id ON user_settings(organization_id);
+CREATE INDEX IF NOT EXISTS idx_family_members_org_id ON family_members(organization_id);
+
+-- 9. Update RLS policies for tenant isolation
+
+-- Organizations RLS
+ALTER TABLE organizations ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view their organization" ON organizations
+    FOR SELECT USING (
+        id IN (
+            SELECT organization_id FROM organization_members 
+            WHERE user_id = auth.uid()
+        )
+    );
+
+CREATE POLICY "Organization admins can update their organization" ON organizations
+    FOR UPDATE USING (
+        id IN (
+            SELECT organization_id FROM organization_members 
+            WHERE user_id = auth.uid() AND role = 'admin'
+        )
+    );
+
+-- Organization members RLS
+ALTER TABLE organization_members ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view their organization members" ON organization_members
+    FOR SELECT USING (
+        organization_id IN (
+            SELECT organization_id FROM organization_members 
+            WHERE user_id = auth.uid()
+        )
+    );
+
+CREATE POLICY "Organization admins can manage members" ON organization_members
+    FOR ALL USING (
+        organization_id IN (
+            SELECT organization_id FROM organization_members 
+            WHERE user_id = auth.uid() AND role = 'admin'
+        )
+    );
+
+-- Subscriptions RLS
+ALTER TABLE subscriptions ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view their organization subscription" ON subscriptions
+    FOR SELECT USING (
+        organization_id IN (
+            SELECT organization_id FROM organization_members 
+            WHERE user_id = auth.uid()
+        )
+    );
+
+-- Payments RLS
+ALTER TABLE payments ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view their organization payments" ON payments
+    FOR SELECT USING (
+        organization_id IN (
+            SELECT organization_id FROM organization_members 
+            WHERE user_id = auth.uid()
+        )
+    );
+
+-- Invitations RLS
+ALTER TABLE invitations ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Organization admins can manage invitations" ON invitations
+    FOR ALL USING (
+        organization_id IN (
+            SELECT organization_id FROM organization_members 
+            WHERE user_id = auth.uid() AND role = 'admin'
+        )
+    );
+
+-- Bot settings RLS
+ALTER TABLE bot_settings ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view their organization bot settings" ON bot_settings
+    FOR SELECT USING (
+        organization_id IN (
+            SELECT organization_id FROM organization_members 
+            WHERE user_id = auth.uid()
+        )
+    );
+
+CREATE POLICY "Organization admins can update bot settings" ON bot_settings
+    FOR UPDATE USING (
+        organization_id IN (
+            SELECT organization_id FROM organization_members 
+            WHERE user_id = auth.uid() AND role = 'admin'
+        )
+    );
+
+-- 10. Create functions for organization management
+
+-- Function to create a new organization and make user admin
+CREATE OR REPLACE FUNCTION create_organization_with_admin(
+    org_name TEXT,
+    org_slug TEXT,
+    user_id UUID DEFAULT auth.uid()
+)
+RETURNS UUID
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+    new_org_id UUID;
+BEGIN
+    -- Insert new organization
+    INSERT INTO organizations (name, slug)
+    VALUES (org_name, org_slug)
+    RETURNING id INTO new_org_id;
+    
+    -- Add user as admin
+    INSERT INTO organization_members (organization_id, user_id, role, joined_at)
+    VALUES (new_org_id, user_id, 'admin', NOW());
+    
+    -- Create default bot settings
+    INSERT INTO bot_settings (organization_id)
+    VALUES (new_org_id);
+    
+    RETURN new_org_id;
+END;
+$$;
+
+-- Function to get user's organization
+CREATE OR REPLACE FUNCTION get_user_organization(user_id UUID DEFAULT auth.uid())
+RETURNS TABLE (
+    organization_id UUID,
+    organization_name TEXT,
+    organization_slug TEXT,
+    user_role user_role
+)
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+BEGIN
+    RETURN QUERY
+    SELECT 
+        o.id,
+        o.name,
+        o.slug,
+        om.role
+    FROM organizations o
+    JOIN organization_members om ON o.id = om.organization_id
+    WHERE om.user_id = get_user_organization.user_id;
+END;
+$$;
+
+-- Function to check if user has permission
+CREATE OR REPLACE FUNCTION user_has_permission(
+    required_role user_role,
+    user_id UUID DEFAULT auth.uid()
+)
+RETURNS BOOLEAN
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+    user_role_val user_role;
+BEGIN
+    SELECT role INTO user_role_val
+    FROM organization_members
+    WHERE organization_members.user_id = user_has_permission.user_id;
+    
+    -- Admin has all permissions
+    IF user_role_val = 'admin' THEN
+        RETURN TRUE;
+    END IF;
+    
+    -- Staff can do staff and viewer actions
+    IF user_role_val = 'staff' AND required_role IN ('staff', 'viewer') THEN
+        RETURN TRUE;
+    END IF;
+    
+    -- Viewer can only do viewer actions
+    IF user_role_val = 'viewer' AND required_role = 'viewer' THEN
+        RETURN TRUE;
+    END IF;
+    
+    RETURN FALSE;
+END;
+$$;
+
+-- 11. Create triggers for updated_at timestamps
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = NOW();
+    RETURN NEW;
+END;
+$$ language 'plpgsql';
+
+CREATE TRIGGER update_organizations_updated_at BEFORE UPDATE ON organizations
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_subscriptions_updated_at BEFORE UPDATE ON subscriptions
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_organization_members_updated_at BEFORE UPDATE ON organization_members
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_bot_settings_updated_at BEFORE UPDATE ON bot_settings
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- 12. Grant necessary permissions
+GRANT USAGE ON SCHEMA public TO authenticated;
+GRANT ALL ON ALL TABLES IN SCHEMA public TO authenticated;
+GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO authenticated;
+
+-- Grant execute permissions on functions
+GRANT EXECUTE ON FUNCTION create_organization_with_admin TO authenticated;
+GRANT EXECUTE ON FUNCTION get_user_organization TO authenticated;
+GRANT EXECUTE ON FUNCTION user_has_permission TO authenticated;
+
+-- Final setup message
+DO $$
+BEGIN
+    RAISE NOTICE '=========================================';
+    RAISE NOTICE 'GENBOOK.AI SaaS SETUP COMPLETE';
+    RAISE NOTICE '=========================================';
+    RAISE NOTICE 'Multitenancy: Organizations, roles, and tenant isolation enabled';
+    RAISE NOTICE 'Billing: Stripe integration tables created';
+    RAISE NOTICE 'Team Management: Invitations and role-based access ready';
+    RAISE NOTICE 'Bot Settings: Per-tenant chatbot customization available';
+    RAISE NOTICE 'Next Steps: Configure Stripe webhooks and deploy frontend';
+    RAISE NOTICE '=========================================';
 END $$;
