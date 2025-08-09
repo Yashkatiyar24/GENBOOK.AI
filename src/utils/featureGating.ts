@@ -1,6 +1,19 @@
+// Feature gating utility for subscription-based features
 import { supabase } from '../supabase';
 
-export interface FeatureLimits {
+// Check if demo mode is enabled
+const isDemoMode = import.meta.env.VITE_DEMO_MODE === 'true';
+const defaultPlan = import.meta.env.VITE_DEFAULT_PLAN || 'professional';
+
+interface SubscriptionPlan {
+  name: string;
+  maxAppointments: number;
+  maxTeamMembers: number;
+  maxChatbotMessages: number;
+  features: string[];
+}
+
+interface FeatureLimits {
   maxAppointmentsPerMonth: number;
   maxChatbotMessages: number;
   maxTeamMembers: number;
@@ -72,6 +85,11 @@ export class FeatureGating {
   }
 
   static async canCreateAppointment(userId: string): Promise<{ allowed: boolean; reason?: string }> {
+    // In demo mode, allow all features
+    if (isDemoMode) {
+      return { allowed: true };
+    }
+
     const org = await this.getOrganization(userId);
     if (!org) return { allowed: false, reason: 'Organization not found' };
 
