@@ -9,6 +9,7 @@ import BillingView from './components/BillingView';
 import TeamView from './components/TeamView';
 import OrganizationSettings from './components/OrganizationSettings';
 import ChatBot from './components/ChatBot';
+import VoiceCommand from './components/VoiceCommand';
 import { supabase } from './supabase';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
 
@@ -135,7 +136,6 @@ function App() {
 
   const handleVoiceCommand = () => {
     setShowVoiceCommand(true);
-    setTimeout(() => setShowVoiceCommand(false), 3000);
   };
 
 
@@ -510,18 +510,6 @@ function App() {
           selectedDate={selectedDate}
         />
 
-        {showVoiceCommand && (
-          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
-            <div className="bg-black/80 backdrop-blur-xl border border-cyan-500/20 rounded-2xl p-8">
-              <div className="flex flex-col items-center space-y-4">
-                <div className="w-16 h-16 rounded-full bg-cyan-500/20 flex items-center justify-center animate-pulse">
-                  <Mic className="w-8 h-8 text-cyan-400" />
-                </div>
-                <p className="text-lg">Listening...</p>
-              </div>
-            </div>
-          </div>
-        )}
 
 
         {/* Authentication Modal */}
@@ -531,6 +519,17 @@ function App() {
           mode={authMode}
           onModeChange={setAuthMode}
           onAuthSuccess={handleAuthSuccess}
+        />
+
+        {/* Voice Command Modal */}
+        <VoiceCommand
+          user={user}
+          isOpen={showVoiceCommand}
+          onClose={() => setShowVoiceCommand(false)}
+          onAppointmentBooked={() => {
+            // Refresh appointments or navigate to schedule
+            setActiveTab('Schedule');
+          }}
         />
 
         {/* Floating ChatBot Widget */}
