@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Welcome to Genbook AI</title>
+    <style>
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f5f7fa;
+            color: #1a1a2e;
+            line-height: 1.6;
+        }
+        
+        .email-container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: #ffffff;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 100%);
+            padding: 32px 20px;
+            text-align: center;
+            border-bottom: 4px solid #06b6d4;
+        }
+        
+        .logo {
+            color: #ffffff;
+            font-size: 28px;
+            font-weight: 700;
+            margin: 0;
+            background: linear-gradient(90deg, #06b6d4 0%, #3b82f6 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            display: inline-block;
+        }
+        
+        .content {
+            padding: 32px;
+            color: #333;
+        }
+        
+        h1 {
+            color: #1a1a2e;
+            font-size: 24px;
+            margin-top: 0;
+            margin-bottom: 24px;
+            font-weight: 600;
+        }
+        
+        p {
+            margin-bottom: 20px;
+            font-size: 16px;
+            color: #4b5563;
+        }
+        
+        .button {
+            display: inline-block;
+            padding: 12px 28px;
+            background: linear-gradient(90deg, #06b6d4 0%, #3b82f6 100%);
+            color: white !important;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 500;
+            font-size: 16px;
+            margin: 24px 0;
+            transition: all 0.3s ease;
+        }
+        
+        .button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(6, 182, 212, 0.2);
+        }
+        
+        .footer {
+            background-color: #f9fafb;
+            padding: 24px;
+            text-align: center;
+            font-size: 14px;
+            color: #6b7280;
+            border-top: 1px solid #e5e7eb;
+        }
+        
+        .divider {
+            height: 1px;
+            background-color: #e5e7eb;
+            margin: 24px 0;
+        }
+        
+        .feature {
+            display: flex;
+            align-items: flex-start;
+            margin-bottom: 20px;
+        }
+        
+        .feature-icon {
+            background: rgba(6, 182, 212, 0.1);
+            border-radius: 8px;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 16px;
+            flex-shrink: 0;
+        }
+        
+        .feature-text h3 {
+            margin: 0 0 4px 0;
+            font-size: 16px;
+            font-weight: 600;
+            color: #1a1a2e;
+        }
+        
+        .feature-text p {
+            margin: 0;
+            font-size: 14px;
+            color: #6b7280;
+        }
+        
+        @media (max-width: 600px) {
+            .content {
+                padding: 24px 16px;
+            }
+            
+            .header {
+                padding: 24px 16px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="email-container">
+        <div class="header">
+            <h1 class="logo">Genbook AI</h1>
+        </div>
+        
+        <div class="content">
+            <h1>Welcome to Genbook AI! 🎉</h1>
+            
+            <p>Hi {{user_first_name}},</p>
+            
+            <p>Thank you for joining Genbook AI! We're excited to have you on board and can't wait to help you streamline your appointment scheduling.</p>
+            
+            <p>With Genbook AI, you can:</p>
+            
+            <div class="feature">
+                <div class="feature-icon">📅</div>
+                <div class="feature-text">
+                    <h3>Book Appointments Instantly</h3>
+                    <p>Schedule meetings with just a few clicks or using voice commands</p>
+                </div>
+            </div>
+            
+            <div class="feature">
+                <div class="feature-icon">🤖</div>
+                <div class="feature-text">
+                    <h3>AI-Powered Scheduling</h3>
+                    <p>Let our AI find the perfect time for your appointments</p>
+                </div>
+            </div>
+            
+            <div class="feature">
+                <div class="feature-icon">🔔</div>
+                <div class="feature-text">
+                    <h3>Smart Reminders</h3>
+                    <p>Never miss an appointment with our automated reminders</p>
+                </div>
+            </div>
+            
+            <a href="{{login_url}}" class="button">Get Started</a>
+            
+            <div class="divider"></div>
+            
+            <p>If you have any questions or need help getting started, feel free to reply to this email or check out our <a href="{{help_center_url}}" style="color: #06b6d4; text-decoration: none;">help center</a>.</p>
+            
+            <p>Happy scheduling!<br>The Genbook AI Team</p>
+        </div>
+        
+        <div class="footer">
+            <p>© 2025 Genbook AI. All rights reserved.</p>
+            <p>1234 Tech Street, San Francisco, CA 94107</p>
+            <p>
+                <a href="{{privacy_policy_url}}" style="color: #06b6d4; text-decoration: none; margin: 0 8px;">Privacy Policy</a> | 
+                <a href="{{terms_url}}" style="color: #06b6d4; text-decoration: none; margin: 0 8px;">Terms of Service</a>
+            </p>
+        </div>
+    </div>
+</body>
+</html>

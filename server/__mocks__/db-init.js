@@ -1,0 +1,1 @@
+module.exports = { initializeDatabase: async () => {} };
