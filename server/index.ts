@@ -27,6 +27,7 @@ interface ErrorWithStatus extends Error {
 
 const app = express();
 const PORT = process.env.PORT || 3001;
+const HOST = process.env.HOST || 'localhost';
 
 // Middleware
 // CORS allowlist from env
@@ -192,8 +193,8 @@ app.use((err: unknown, req: Request, res: Response, next: NextFunction) => {
   // Log error to console
   console.error('Error:', err);
 
-  res.status(status).json({ 
-    error: 'Internal server error', 
+  res.status(status).json({
+    error: 'Internal server error',
     message,
     ...(process.env.NODE_ENV === 'development' && { stack: error.stack })
   });
@@ -208,9 +209,9 @@ async function startServer() {
 
     const server = createServer(app);
 
-    server.listen(PORT, () => {
-      console.log(`Server running on port ${PORT}`);
-      console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+    server.listen(PORT, HOST, () => {
+      console.log(`🚀 Server running on ${HOST}:${PORT}`);
+      console.log(`📊 Health check: http://${HOST}:${PORT}/health`);
       // Start background processors
       startNotificationProcessor();
     });

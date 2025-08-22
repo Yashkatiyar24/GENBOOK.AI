@@ -58,6 +58,7 @@ export default function BillingView() {
   const [currentPlan, setCurrentPlan] = useState<string>('Starter');
   const [user, setUser] = useState<{ name: string; email: string; contact?: string } | null>(null);
   const [loading, setLoading] = useState(false);
+  const [apiError, setApiError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchUserData();
@@ -88,8 +89,29 @@ export default function BillingView() {
 
   const fetchCurrentSubscription = async () => {
     try {
+      setApiError(null);
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
+        // Try to fetch from API first, fallback to direct Supabase query
+        try {
+          const response = await fetch('/api/billing/subscription', {
+            headers: {
+              'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`
+            }
+          });
+          
+          if (response.ok) {
+            const data = await response.json();
+            if (data.plan) {
+              setCurrentPlan(data.plan);
+              return;
+            }
+          }
+        } catch (apiErr) {
+          console.warn('API not available, using direct database query');
+        }
+
+        // Fallback to direct Supabase query
         const { data: subscription } = await supabase
           .from('subscriptions')
           .select('plan')
@@ -103,6 +125,7 @@ export default function BillingView() {
       }
     } catch (error) {
       console.error('Error fetching subscription:', error);
+      setApiError('Unable to load subscription data. Please refresh the page.');
     }
   };
 
@@ -217,6 +240,18 @@ export default function BillingView() {
           Upgrade Plan
         </Button>
       </div>
+
+      {apiError && (
+        <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-4">
+          <p className="text-red-400">{apiError}</p>
+          <button 
+            onClick={() => { setApiError(null); fetchCurrentSubscription(); }}
+            className="mt-2 text-sm text-red-300 hover:text-red-200 underline"
+          >
+            Retry
+          </button>
+        </div>
+      )}
 
       <div className="bg-[#181f2a] rounded-xl p-6">
         <h2 className="text-xl font-semibold mb-4 text-white">Current Plan</h2>
