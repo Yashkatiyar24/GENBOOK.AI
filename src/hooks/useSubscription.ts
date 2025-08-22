@@ -24,7 +24,7 @@ export const useSubscription = () => {
 
   const fetchCurrentPlan = async () => {
     try {
-      const response = await fetch('/api/v1/billing/subscription');
+      const response = await fetch('/functions/v1/razorpay-current-subscription');
       if (response.ok) {
         const data = await response.json();
         setCurrentPlan(data.plan_id || null);
@@ -38,7 +38,6 @@ export const useSubscription = () => {
 
   const handleSubscription = async (planId: string) => {
     if (loading) return;
-    
     setLoading(true);
     try {
       // Load Razorpay SDK
@@ -48,7 +47,7 @@ export const useSubscription = () => {
       }
 
       // Create or update subscription
-      const response = await fetch('/api/v1/billing/subscribe', {
+      const response = await fetch('/functions/v1/razorpay-create-subscription', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -95,7 +94,7 @@ export const useSubscription = () => {
     }
 
     try {
-      const response = await fetch('/api/v1/billing/cancel-subscription', {
+      const response = await fetch('/functions/v1/razorpay-cancel-subscription', {
         method: 'POST',
       });
 

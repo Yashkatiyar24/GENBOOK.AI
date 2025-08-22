@@ -1,56 +1,67 @@
 import React, { useState, useEffect } from 'react'
-import RazorpayCheckout from '../components/RazorpayCheckout'
+import RazorpayModal from '../components/RazorpayModal'
 import { supabase } from '../utils/supabaseClient'
 
 const plans = [
-  { id: 1, name: 'Professional', price: 999, interval: 'monthly' },
-  { id: 2, name: 'Enterprise', price: 2999, interval: 'monthly' }
+  { id: 1, name: 'Professional', price: 999, interval: 'month' },
+  { id: 2, name: 'Enterprise', price: 2999, interval: 'month' }
 ]
 
 export default function Pricing() {
-  const [subscriptionId, setSubscriptionId] = useState<string | null>(null)
-  const [selectedPlan, setSelectedPlan] = useState<number | null>(null)
-  const [userId, setUserId] = useState<string | null>(null)
+  const [modalOpen, setModalOpen] = useState(false)
+  const [selectedPlan, setSelectedPlan] = useState<typeof plans[0] | null>(null)
+  const [user, setUser] = useState<{ id: string, name: string, email: string, contact?: string } | null>(null)
 
   useEffect(() => {
     const getUser = async () => {
       const { data: { user } } = await supabase.auth.getUser()
-      setUserId(user?.id || null)
+      if (user) {
+        setUser({
+          id: user.id,
+          name: user.user_metadata?.name || '',
+          email: user.email || '',
+          contact: user.user_metadata?.phone || ''
+        })
+      } else {
+        setUser(null)
+      }
     }
     getUser()
   }, [])
 
-  const handleSubscribe = async (planId: number) => {
-    setSelectedPlan(planId)
-    if (!userId) {
-      alert('You must be logged in to subscribe.')
-      return
-    }
-    // Call Edge Function to create Razorpay subscription
-    const res = await fetch('/functions/v1/razorpay-create-subscription', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ planId, userId })
-    })
-    const data = await res.json()
-    if (data && data.id) {
-      setSubscriptionId(data.id)
-    } else {
-      alert('Failed to create subscription')
-    }
+  const handleSelectPlan = (plan: typeof plans[0]) => {
+    setSelectedPlan(plan)
+    setModalOpen(true)
   }
 
   return (
     <div>
-      <h1>Choose Your Plan</h1>
-      {plans.map(plan => (
-        <div key={plan.id} style={{border: '1px solid #eee', padding: 16, marginBottom: 16}}>
-          <h2>{plan.name}</h2>
-          <p>₹{plan.price} / {plan.interval}</p>
-          <button onClick={() => handleSubscribe(plan.id)}>Subscribe</button>
-        </div>
-      ))}
-      {subscriptionId && <RazorpayCheckout subscriptionId={subscriptionId} />}
+      <h1 className="text-2xl font-bold mb-6 text-[#00bfff]">Choose Your Plan</h1>
+      <div className="flex gap-6 flex-wrap">
+        {plans.map(plan => (
+          <div key={plan.id} className="bg-[#181f2a] rounded-xl shadow p-6 w-full max-w-xs text-white">
+            <h2 className="text-xl font-semibold mb-2 text-[#00bfff]">{plan.name}</h2>
+            <p className="mb-4 text-lg font-medium">
+              <span className="text-white">₹{plan.price}</span>
+              <span className="text-gray-400"> / {plan.interval}</span>
+            </p>
+            <button
+              className="w-full py-2 rounded bg-[#00bfff] text-white font-semibold text-lg hover:bg-[#0099cc] transition"
+              onClick={() => handleSelectPlan(plan)}
+            >
+              Select Plan
+            </button>
+          </div>
+        ))}
+      </div>
+      {selectedPlan && modalOpen && (
+        <RazorpayModal
+          open={modalOpen}
+          onClose={() => setModalOpen(false)}
+          plan={selectedPlan}
+          user={user}
+        />
+      )}
     </div>
   )
 }

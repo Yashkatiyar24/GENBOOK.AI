@@ -1,4 +1,5 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
+import RazorpayModal from './RazorpayModal';
 import { CreditCard, DollarSign, Loader2, CheckCircle } from 'lucide-react';
 import { Button } from './ui/button';
 import { useSubscription } from '../hooks/useSubscription';
@@ -56,12 +57,19 @@ const BillingView: React.FC<BillingViewProps> = ({ user }) => {
     currentPlan,
     isLoading,
     loading: processing,
-    handleSubscription,
     cancelSubscription
   } = useSubscription();
 
+  const [modalOpen, setModalOpen] = useState(false);
+  const [selectedPlan, setSelectedPlan] = useState(null);
+
   const currentPlanData = PLANS.find(plan => plan.id === currentPlan) || PLANS[0];
   const isFreePlan = currentPlan === 'free' || !currentPlan;
+
+  const handleSelectPlan = (plan) => {
+    setSelectedPlan(plan);
+    setModalOpen(true);
+  };
 
   if (isLoading) {
     return (
@@ -163,19 +171,28 @@ const BillingView: React.FC<BillingViewProps> = ({ user }) => {
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           {PLANS.map((plan) => (
-            <PlanCard
-              key={plan.id}
-              name={plan.name}
-              price={plan.price}
-              description={plan.description}
-              features={plan.features}
-              isCurrent={currentPlan === plan.id}
-              isUpgrading={processing && currentPlan === plan.id}
-              onSelect={() => handleSubscription(plan.id)}
-              highlight={plan.id === 'professional'}
-            />
+            <div key={plan.id}>
+              <PlanCard
+                name={plan.name}
+                price={plan.price}
+                description={plan.description}
+                features={plan.features}
+                isCurrent={currentPlan === plan.id}
+                isUpgrading={processing && currentPlan === plan.id}
+                onSelect={() => handleSelectPlan(plan)}
+                highlight={plan.id === 'professional'}
+              />
+            </div>
           ))}
         </div>
+        {modalOpen && selectedPlan && (
+          <RazorpayModal
+            open={modalOpen}
+            onClose={() => setModalOpen(false)}
+            plan={selectedPlan}
+            user={user}
+          />
+        )}
       </div>
 
     </div>
