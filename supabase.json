@@ -1,0 +1,34 @@
+{
+  "$schema": "https://supabase.com/schemas/project.json",
+  "name": "genbook-ai",
+  "organizationId": "your-organization-id",
+  "projectId": "your-project-id",
+  "region": "us-east-1",
+  "database": {
+    "host": "db.deddapftymntugxdxnmo.supabase.co",
+    "port": 5432,
+    "name": "postgres",
+    "ssl": true
+  },
+  "auth": {
+    "site_url": "http://localhost:3000",
+    "redirect_urls": [
+      "http://localhost:3000/auth/callback"
+    ],
+    "jwt_expiry": 3600,
+    "enable_anonymous_users": false,
+    "enable_signup": true,
+    "email": {
+      "enable_signup": true,
+      "double_confirm_changes": true,
+      "enable_confirmations": true
+    }
+  },
+  "storage": {
+    "file_size_limit": 52428800
+  },
+  "api": {
+    "enabled": true,
+    "request_scheme": "https",
+    "request_path": "/rest/v1",
+    

@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
+    <title>Vite + React + TS</title>
+    <style>
+      /* Custom styles can go here */
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script>
+      (function () {
+        function applyMobileClass() {
+          var isMobile = window.innerWidth < 1024;
+          var html = document.documentElement;
+          if (isMobile) {
+            html.classList.add('force-mobile');
+          } else {
+            html.classList.remove('force-mobile');
+          }
+        }
+        applyMobileClass();
+        window.addEventListener('resize', applyMobileClass);
+      })();
+    </script>
+    <script type="module" src="/src/main.tsx"></script>
+    <!-- Omnidimension widget -->
+    <script
+      id="omnidimension-web-widget"
+      async
+      src="https://backend.omnidim.io/web_widget.js?secret_key=38d89f800d27c7c7e8e6bf4ef980e96f"
+    ></script>
+    <footer style="margin-top:24px;padding:16px;border-top:1px solid #1f2937; background:#0a0e12;">
+      <div style="max-width:960px;margin:0 auto;display:flex;gap:12px;flex-wrap:wrap;justify-content:center;">
+        <a href="/privacy.html" style="color:#22d3ee;">Privacy Policy</a>
+        <span style="color:#6b7280;">•</span>
+        <a href="/terms.html" style="color:#22d3ee;">Terms & Conditions</a>
+        <span style="color:#6b7280;">•</span>
+        <a href="/cancellation-refund.html" style="color:#22d3ee;">Cancellation & Refunds</a>
+        <span style="color:#6b7280;">•</span>
+        <a href="/shipping.html" style="color:#22d3ee;">Shipping</a>
+        <span style="color:#6b7280;">•</span>
+        <a href="/contact.html" style="color:#22d3ee;">Contact Us</a>
+      </div>
+    </footer>
+  </body>
+</html>
