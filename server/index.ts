@@ -188,10 +188,10 @@ app.use((err: unknown, req: Request, res: Response, next: NextFunction) => {
   const error = err as ErrorWithStatus;
   const status = error.status || 500;
   const message = error.message || 'An unknown error occurred';
-  
+
   // Log error to console
   console.error('Error:', err);
-  
+
   res.status(status).json({ 
     error: 'Internal server error', 
     message,
@@ -205,9 +205,9 @@ async function startServer() {
     console.log('Initializing database...');
     await initializeDatabase();
     await setupRLS();
-    
+
     const server = createServer(app);
-    
+
     server.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);
       console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);

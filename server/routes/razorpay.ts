@@ -232,6 +232,73 @@ router.post('/webhook', express.raw({ type: '*/*' }), async (req: Request, res: 
   }
 });
 
+// Verify Razorpay payment
+router.post('/verify', async (req: Request, res: Response) => {
+  try {
+    const { razorpay_payment_id, razorpay_order_id, razorpay_signature, plan } = req.body;
+    
+    if (!razorpay_payment_id || !razorpay_order_id || !razorpay_signature) {
+      return res.status(400).json({ error: 'Missing required payment details' });
+    }
+
+    const keySecret = process.env.RAZORPAY_KEY_SECRET;
+    if (!keySecret) {
+      return res.status(500).json({ error: 'Razorpay not configured' });
+    }
+
+    // Verify signature
+    const body = razorpay_order_id + "|" + razorpay_payment_id;
+    const expectedSignature = crypto.createHmac('sha256', keySecret)
+      .update(body.toString())
+      .digest('hex');
+
+    if (expectedSignature !== razorpay_signature) {
+      return res.status(400).json({ error: 'Invalid payment signature' });
+    }
+
+    // Get user from auth header or session
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      return res.status(401).json({ error: 'Authorization required' });
+    }
+
+    // Extract JWT token and get user
+    const token = authHeader.replace('Bearer ', '');
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    
+    if (authError || !user) {
+      return res.status(401).json({ error: 'Invalid authorization' });
+    }
+
+    // Update user subscription in database
+    const now = new Date().toISOString();
+    const { error: subscriptionError } = await supabase
+      .from('subscriptions')
+      .upsert({
+        user_id: user.id,
+        plan: plan.toLowerCase(),
+        status: 'active',
+        razorpay_payment_id,
+        razorpay_order_id,
+        current_period_start: now,
+        current_period_end: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 days from now
+        updated_at: now
+      }, {
+        onConflict: 'user_id'
+      });
+
+    if (subscriptionError) {
+      console.error('Database error:', subscriptionError);
+      return res.status(500).json({ error: 'Failed to update subscription' });
+    }
+
+    res.json({ success: true, message: 'Payment verified and subscription updated' });
+  } catch (error: any) {
+    console.error('Payment verification error:', error);
+    res.status(500).json({ error: 'Payment verification failed' });
+  }
+});
+
 // Cancel a Razorpay subscription
 router.post('/subscription/:id/cancel', async (req: Request, res: Response) => {
   try {

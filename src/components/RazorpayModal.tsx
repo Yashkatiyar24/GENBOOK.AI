@@ -8,9 +8,10 @@ type RazorpayModalProps = {
   onClose: () => void;
   plan: { name: string; price: number; interval: string };
   user?: { name: string; email: string; contact?: string } | null;
+  onSuccess?: () => void;
 };
 
-export default function RazorpayModal({ open, onClose, plan, user }: RazorpayModalProps) {
+export default function RazorpayModal({ open, onClose, plan, user, onSuccess }: RazorpayModalProps) {
   const [name, setName] = useState(user?.name || "");
   const [email, setEmail] = useState(user?.email || "");
   const [phone, setPhone] = useState(user?.contact || "");
@@ -19,62 +20,100 @@ export default function RazorpayModal({ open, onClose, plan, user }: RazorpayMod
   const [loading, setLoading] = useState(false);
 
   const handlePayment = async () => {
+    if (!name || !email || !phone) {
+      alert("Please fill in all required fields");
+      return;
+    }
+
     setLoading(true);
     try {
+      // Load Razorpay script if not already loaded
+      if (!window.Razorpay) {
+        const script = document.createElement('script');
+        script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+        script.async = true;
+        document.body.appendChild(script);
+        
+        await new Promise((resolve) => {
+          script.onload = resolve;
+        });
+      }
+
       // 1. Create order on backend
-      const res = await fetch("/api/create-order", {
+      const res = await fetch("/api/razorpay/order", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          plan: plan.name,
-          price: plan.price,
-          interval: plan.interval,
-          name,
-          email,
-          phone: countryCode + phone,
-          notify,
+          amount: plan.price * 100, // Convert to paise
+          currency: "INR",
+          receipt: `order_${Date.now()}`,
+          notes: {
+            plan: plan.name,
+            customer_name: name,
+            customer_email: email,
+            customer_phone: countryCode + phone
+          }
         }),
       });
-      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error('Failed to create order');
+      }
+
+      const order = await res.json();
 
       // 2. Open Razorpay Checkout
       const options = {
-        key: "YOUR_RAZORPAY_KEY_ID", // Replace with your Razorpay Key ID
-        amount: data.amount,
-        currency: "INR",
+        key: import.meta.env.VITE_RAZORPAY_KEY_ID,
+        amount: order.amount,
+        currency: order.currency,
         name: "GenBook.AI",
-        description: `${plan.name} Subscription`,
-        order_id: data.id,
+        description: `${plan.name} Plan Subscription`,
+        order_id: order.id,
         prefill: {
-          name: data.customerName,
-          email: data.customerEmail,
-          contact: data.customerPhone,
+          name: name,
+          email: email,
+          contact: countryCode + phone,
         },
         theme: { color: "#00bfff" },
         handler: async function (response: any) {
-          // 3. Verify payment
-          await fetch("/api/verify-payment", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              payment_id: response.razorpay_payment_id,
-              order_id: response.razorpay_order_id,
-              signature: response.razorpay_signature,
-            }),
-          });
-          alert("Payment successful! Subscription activated.");
-          onClose();
+          try {
+            // 3. Verify payment on backend
+            const verifyRes = await fetch("/api/razorpay/verify", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_signature: response.razorpay_signature,
+                plan: plan.name
+              }),
+            });
+
+            if (verifyRes.ok) {
+              alert("Payment successful! Your subscription has been upgraded.");
+              onSuccess?.();
+              onClose();
+            } else {
+              throw new Error('Payment verification failed');
+            }
+          } catch (error) {
+            console.error('Payment verification error:', error);
+            alert("Payment completed but verification failed. Please contact support.");
+          }
         },
         modal: {
-          ondismiss: () => setLoading(false),
+          ondismiss: () => {
+            setLoading(false);
+          },
         },
       };
-      // @ts-ignore
+
       const rzp = new window.Razorpay(options);
       rzp.open();
     } catch (err) {
+      console.error('Payment error:', err);
       alert("Payment failed. Please try again.");
-    } finally {
       setLoading(false);
     }
   };
