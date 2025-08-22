@@ -1,347 +1,376 @@
 import express from 'express';
 import type { Request, Response } from 'express';
 import crypto from 'crypto';
+import Razorpay from 'razorpay';
 import { supabase } from '../supabase.js';
 
 const router = express.Router();
 
+// Initialize Razorpay
+const razorpay = new Razorpay({
+  key_id: process.env.RAZORPAY_KEY_ID || '',
+  key_secret: process.env.RAZORPAY_KEY_SECRET || ''
+});
+
+// Plan configuration
+const PLAN_CONFIG = {
+  professional: {
+    name: 'Professional',
+    price: 2900, // ₹29.00 in paise
+    currency: 'INR'
+  },
+  enterprise: {
+    name: 'Enterprise',
+    price: 9900, // ₹99.00 in paise
+    currency: 'INR'
+  }
+};
+
+// Middleware to verify authentication
+const requireAuth = async (req: Request, res: Response, next: any) => {
+  try {
+    const token = req.headers.authorization?.replace('Bearer ', '');
+    if (!token) {
+      return res.status(401).json({ error: 'Authorization token required' });
+    }
+
+    const { data: { user }, error } = await supabase.auth.getUser(token);
+    if (error || !user) {
+      return res.status(401).json({ error: 'Invalid or expired token' });
+    }
+
+    (req as any).user = user;
+    next();
+  } catch (error) {
+    console.error('Auth middleware error:', error);
+    res.status(500).json({ error: 'Authentication failed' });
+  }
+};
+
 // Create Razorpay order
-router.post('/order', async (req: Request, res: Response) => {
+router.post('/create-order', requireAuth, async (req: Request, res: Response) => {
   try {
-    const keyId = process.env.RAZORPAY_KEY_ID;
-    const keySecret = process.env.RAZORPAY_KEY_SECRET;
-    if (!keyId || !keySecret) return res.status(400).json({ error: 'Razorpay not configured' });
+    const { planId, amount, userDetails } = req.body;
+    const user = (req as any).user;
 
-    const { amount, currency = 'INR', receipt = `rcpt_${Date.now()}`, notes = {} } = req.body || {};
-    if (!amount || Number.isNaN(Number(amount))) return res.status(400).json({ error: 'Invalid amount' });
-    // Ensure we pass tenant context forward for webhook correlation
-    const tenantId = (req as any).tenantId as string | undefined;
-    const enrichedNotes = {
-      ...notes,
-      tenantId: notes?.tenantId || tenantId || 'unknown',
-    };
-
-    const auth = Buffer.from(`${keyId}:${keySecret}`).toString('base64');
-    const rpRes = await fetch('https://api.razorpay.com/v1/orders', {
-      method: 'POST',
-      headers: { 'Authorization': `Basic ${auth}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ amount: Math.round(Number(amount)), currency, receipt, notes: enrichedNotes }),
-    });
-    const text = await rpRes.text();
-    if (!rpRes.ok) {
-      try {
-        const j = JSON.parse(text);
-        return res.status(rpRes.status).json({ error: j?.error?.description || j?.error || text });
-      } catch {
-        return res.status(rpRes.status).json({ error: text });
-      }
+    if (!planId || !amount || !userDetails) {
+      return res.status(400).json({ error: 'Missing required fields' });
     }
-    const data = JSON.parse(text);
-    res.json(data);
-  } catch (e: any) {
-    res.status(500).json({ error: e?.message || 'Failed to create order' });
-  }
-});
 
-// Create Razorpay subscription
-router.post('/subscription', async (req: Request, res: Response) => {
-  try {
-    const keyId = process.env.RAZORPAY_KEY_ID;
-    const keySecret = process.env.RAZORPAY_KEY_SECRET;
-    if (!keyId || !keySecret) return res.status(400).json({ error: 'Razorpay not configured' });
+    const planConfig = PLAN_CONFIG[planId as keyof typeof PLAN_CONFIG];
+    if (!planConfig) {
+      return res.status(400).json({ error: 'Invalid plan selected' });
+    }
 
-    const { planId, totalCount = 12, quantity = 1, customerNotify = 1, notes = {} } = req.body || {};
-    if (!planId || typeof planId !== 'string') return res.status(400).json({ error: 'planId is required' });
-
-    const tenantId = (req as any).tenantId as string | undefined;
-    const enrichedNotes = {
-      ...notes,
-      tenantId: notes?.tenantId || tenantId || 'unknown',
-    };
-
-    const auth = Buffer.from(`${keyId}:${keySecret}`).toString('base64');
-    const rpRes = await fetch('https://api.razorpay.com/v1/subscriptions', {
-      method: 'POST',
-      headers: { 'Authorization': `Basic ${auth}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
+    // Create order with Razorpay
+    const orderOptions = {
+      amount: planConfig.price, // Amount in paise
+      currency: planConfig.currency,
+      receipt: `order_${user.id}_${Date.now()}`,
+      notes: {
+        user_id: user.id,
         plan_id: planId,
-        total_count: Number(totalCount),
-        quantity: Number(quantity),
-        customer_notify: Number(customerNotify),
-        notes: enrichedNotes,
-      }),
-    });
-    const text = await rpRes.text();
-    if (!rpRes.ok) {
-      try {
-        const j = JSON.parse(text);
-        return res.status(rpRes.status).json({ error: j?.error?.description || j?.error || text });
-      } catch {
-        return res.status(rpRes.status).json({ error: text });
+        plan_name: planConfig.name,
+        user_email: userDetails.email,
+        user_name: userDetails.fullName,
+        user_phone: userDetails.phone,
+        company: userDetails.company || ''
       }
-    }
-    const data = JSON.parse(text);
-    res.json(data);
-  } catch (e: any) {
-    res.status(500).json({ error: e?.message || 'Failed to create subscription' });
-  }
-});
-
-// Webhook verification + event mapping
-router.post('/webhook', express.raw({ type: '*/*' }), async (req: Request, res: Response) => {
-  try {
-    const secret = process.env.RAZORPAY_WEBHOOK_SECRET;
-    if (!secret) return res.status(400).send('Webhook not configured');
-
-    const signature = req.headers['x-razorpay-signature'] as string | undefined;
-    if (!signature) return res.status(400).send('Missing signature');
-
-    const body = req.body as Buffer;
-    const expected = crypto.createHmac('sha256', secret).update(body).digest('hex');
-    if (expected !== signature) return res.status(400).send('Invalid signature');
-
-    const text = body.toString('utf8');
-    let event: any;
-    try {
-      event = JSON.parse(text);
-    } catch {
-      return res.status(400).send('Invalid JSON');
-    }
-
-    // Idempotency: compute deterministic event id and record it
-    const eventId = crypto.createHash('sha256').update(body).digest('hex');
-    try {
-      const { error: evtErr } = await supabase
-        .from('billing_events')
-        .insert({ event_id: eventId, provider: 'razorpay' });
-      if (evtErr) {
-        // Duplicate event: already processed
-        // Postgres unique_violation code
-        // @ts-ignore
-        if (evtErr.code === '23505') {
-          return res.status(200).json({ received: true, duplicate: true });
-        }
-        throw evtErr;
-      }
-    } catch (e) {
-      // If we cannot ensure idempotency storage, avoid processing to prevent duplicates
-      return res.status(500).send('Idempotency check failed');
-    }
-
-    const eventType: string = event?.event || '';
-    const payload: any = event?.payload || {};
-
-    // Helpers
-    const now = () => new Date().toISOString();
-
-    function normalizePlan(raw?: string | null): string {
-      const s = (raw || '').toLowerCase();
-      if (!s) return 'starter';
-      if (s.includes('pro') || s.includes('professional')) return 'professional';
-      if (s.includes('enterprise')) return 'enterprise';
-      if (s.includes('starter') || s.includes('basic') || s.includes('free')) return 'starter';
-      return s; // allow custom plan keys
-    }
-
-    function mapStatus(evt: string): { status: string; cancel?: boolean } {
-      switch (evt) {
-        case 'subscription.activated':
-        case 'subscription.authenticated':
-        case 'subscription.charged':
-          return { status: 'active' };
-        case 'payment.failed':
-        case 'subscription.pending':
-          return { status: 'past_due' };
-        case 'subscription.halted':
-        case 'subscription.completed':
-        case 'subscription.cancelled':
-        case 'subscription.paused':
-          return { status: 'cancelled', cancel: true };
-        default:
-          return { status: 'active' };
-      }
-    }
-
-    async function upsertSubscriptionByTenant(tenantId: string, fields: Record<string, any>) {
-      if (!tenantId) return;
-      // Upsert by tenant_id
-      const { error } = await supabase
-        .from('subscriptions')
-        .upsert({ tenant_id: tenantId, updated_at: now(), ...fields }, { onConflict: 'tenant_id' });
-      if (error) throw error;
-    }
-
-    // Extract common info: tenantId, plan, period
-    let tenantId: string | undefined;
-    let plan: string | undefined;
-    let current_period_start: string | undefined;
-    let current_period_end: string | undefined;
-    let subscriptionId: string | undefined;
-
-    // Try to derive from different payload shapes
-    // 1) Subscription events
-    const subEntity = payload?.subscription?.entity || payload?.subscription || payload?.subscription_entity;
-    if (subEntity) {
-      tenantId = subEntity?.notes?.tenantId || subEntity?.notes?.tenant_id;
-      plan = normalizePlan(subEntity?.notes?.plan || subEntity?.plan_id || subEntity?.plan?.item?.name);
-      subscriptionId = subEntity?.id;
-      // Razorpay subscription has current_start and current_end in epoch seconds
-      const startSec = subEntity?.current_start || subEntity?.start_at;
-      const endSec = subEntity?.current_end || subEntity?.charge_at || subEntity?.end_at;
-      if (startSec) current_period_start = new Date(Number(startSec) * 1000).toISOString();
-      if (endSec) current_period_end = new Date(Number(endSec) * 1000).toISOString();
-    }
-
-    // 2) Payment/order events fall back
-    const orderEntity = payload?.order?.entity || payload?.order || payload?.order_entity;
-    if (!tenantId && orderEntity) {
-      tenantId = orderEntity?.notes?.tenantId || orderEntity?.notes?.tenant_id;
-      plan = normalizePlan(plan || orderEntity?.notes?.plan);
-    }
-    const paymentEntity = payload?.payment?.entity || payload?.payment || payload?.payment_entity;
-    if (!tenantId && paymentEntity) {
-      tenantId = paymentEntity?.notes?.tenantId || paymentEntity?.notes?.tenant_id;
-      plan = normalizePlan(plan || paymentEntity?.notes?.plan);
-    }
-
-    if (!tenantId) {
-      // Cannot correlate — acknowledge to avoid retries but log for investigation
-      console.warn('Razorpay webhook without tenantId in notes');
-      return res.status(200).json({ received: true, warning: 'missing-tenant' });
-    }
-
-    const { status, cancel } = mapStatus(eventType);
-
-    const fields: any = {
-      plan: normalizePlan(plan),
-      status,
     };
-    if (current_period_start) fields.current_period_start = current_period_start;
-    if (current_period_end) fields.current_period_end = current_period_end;
-    if (cancel) fields.canceled_at = now();
-    // Store gateway subscription id into generic field if available to aid support
-    if (subscriptionId) {
-      fields.razorpay_subscription_id = subscriptionId;
+
+    const order = await razorpay.orders.create(orderOptions);
+
+    // Store order details in database for verification
+    const { error: dbError } = await supabase
+      .from('payment_orders')
+      .insert({
+        order_id: order.id,
+        user_id: user.id,
+        plan_id: planId,
+        amount: planConfig.price,
+        currency: planConfig.currency,
+        status: 'created',
+        user_details: userDetails,
+        created_at: new Date().toISOString()
+      });
+
+    if (dbError) {
+      console.error('Error storing order:', dbError);
+      // Continue anyway, as order creation succeeded
     }
 
-    await upsertSubscriptionByTenant(tenantId, fields);
+    res.json({
+      id: order.id,
+      amount: order.amount,
+      currency: order.currency,
+      receipt: order.receipt
+    });
 
-    return res.status(200).json({ received: true });
-  } catch (e) {
-    res.status(500).send('Error handling webhook');
+  } catch (error: any) {
+    console.error('Create order error:', error);
+    res.status(500).json({ 
+      error: error.message || 'Failed to create order',
+      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
   }
 });
 
-// Verify Razorpay payment
-router.post('/verify', async (req: Request, res: Response) => {
+// Verify payment and update subscription
+router.post('/verify-payment', requireAuth, async (req: Request, res: Response) => {
   try {
-    const { razorpay_payment_id, razorpay_order_id, razorpay_signature, plan } = req.body;
-    
-    if (!razorpay_payment_id || !razorpay_order_id || !razorpay_signature) {
-      return res.status(400).json({ error: 'Missing required payment details' });
-    }
+    const {
+      razorpay_payment_id,
+      razorpay_order_id,
+      razorpay_signature,
+      planId,
+      userDetails
+    } = req.body;
+    const user = (req as any).user;
 
-    const keySecret = process.env.RAZORPAY_KEY_SECRET;
-    if (!keySecret) {
-      return res.status(500).json({ error: 'Razorpay not configured' });
+    if (!razorpay_payment_id || !razorpay_order_id || !razorpay_signature) {
+      return res.status(400).json({ error: 'Missing payment verification data' });
     }
 
     // Verify signature
     const body = razorpay_order_id + "|" + razorpay_payment_id;
-    const expectedSignature = crypto.createHmac('sha256', keySecret)
+    const expectedSignature = crypto
+      .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET || '')
       .update(body.toString())
       .digest('hex');
 
     if (expectedSignature !== razorpay_signature) {
-      return res.status(400).json({ error: 'Invalid payment signature' });
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Invalid payment signature' 
+      });
     }
 
-    // Get user from auth header or session
-    const authHeader = req.headers.authorization;
-    if (!authHeader) {
-      return res.status(401).json({ error: 'Authorization required' });
+    // Get order details from Razorpay to verify amount
+    const order = await razorpay.orders.fetch(razorpay_order_id);
+    const planConfig = PLAN_CONFIG[planId as keyof typeof PLAN_CONFIG];
+
+    if (!planConfig || order.amount !== planConfig.price) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Order amount mismatch' 
+      });
     }
 
-    // Extract JWT token and get user
-    const token = authHeader.replace('Bearer ', '');
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
-    
-    if (authError || !user) {
-      return res.status(401).json({ error: 'Invalid authorization' });
-    }
+    // Calculate subscription period
+    const now = new Date();
+    const periodEnd = new Date(now.getFullYear(), now.getMonth() + 1, now.getDate());
 
     // Update user subscription in database
-    const now = new Date().toISOString();
     const { error: subscriptionError } = await supabase
       .from('subscriptions')
       .upsert({
         user_id: user.id,
-        plan: plan.toLowerCase(),
+        plan: planId,
         status: 'active',
         razorpay_payment_id,
         razorpay_order_id,
-        current_period_start: now,
-        current_period_end: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 days from now
-        updated_at: now
+        amount_paid: planConfig.price,
+        currency: planConfig.currency,
+        current_period_start: now.toISOString(),
+        current_period_end: periodEnd.toISOString(),
+        updated_at: now.toISOString()
       }, {
         onConflict: 'user_id'
       });
 
     if (subscriptionError) {
       console.error('Database error:', subscriptionError);
-      return res.status(500).json({ error: 'Failed to update subscription' });
+      return res.status(500).json({ 
+        success: false, 
+        error: 'Failed to update subscription' 
+      });
     }
 
-    res.json({ success: true, message: 'Payment verified and subscription updated' });
+    // Update user profile with billing details
+    const { error: profileError } = await supabase
+      .from('user_profiles')
+      .upsert({
+        user_id: user.id,
+        full_name: userDetails.fullName,
+        phone: userDetails.phone,
+        company: userDetails.company,
+        updated_at: now.toISOString()
+      }, {
+        onConflict: 'user_id'
+      });
+
+    if (profileError) {
+      console.warn('Failed to update user profile:', profileError);
+      // Don't fail the payment for this
+    }
+
+    // Record payment in payments table
+    const { error: paymentError } = await supabase
+      .from('payments')
+      .insert({
+        user_id: user.id,
+        razorpay_payment_id,
+        razorpay_order_id,
+        amount: planConfig.price,
+        currency: planConfig.currency,
+        status: 'completed',
+        plan_id: planId,
+        created_at: now.toISOString()
+      });
+
+    if (paymentError) {
+      console.warn('Failed to record payment:', paymentError);
+      // Don't fail the payment for this
+    }
+
+    // Send confirmation email (optional)
+    try {
+      await sendConfirmationEmail(userDetails.email, userDetails.fullName, planConfig.name);
+    } catch (emailError) {
+      console.warn('Failed to send confirmation email:', emailError);
+      // Don't fail the payment for email issues
+    }
+
+    res.json({ 
+      success: true, 
+      message: 'Payment verified and subscription updated successfully',
+      plan: planId,
+      amount: planConfig.price
+    });
+
   } catch (error: any) {
     console.error('Payment verification error:', error);
-    res.status(500).json({ error: 'Payment verification failed' });
-  }
-});
-
-// Cancel a Razorpay subscription
-router.post('/subscription/:id/cancel', async (req: Request, res: Response) => {
-  try {
-    const keyId = process.env.RAZORPAY_KEY_ID;
-    const keySecret = process.env.RAZORPAY_KEY_SECRET;
-    if (!keyId || !keySecret) return res.status(400).json({ error: 'Razorpay not configured' });
-
-    const subId = req.params.id;
-    const { cancel_at_cycle_end = true } = req.body || {};
-    if (!subId) return res.status(400).json({ error: 'subscription id is required' });
-
-    const auth = Buffer.from(`${keyId}:${keySecret}`).toString('base64');
-    const rpRes = await fetch(`https://api.razorpay.com/v1/subscriptions/${encodeURIComponent(subId)}/cancel`, {
-      method: 'POST',
-      headers: { 'Authorization': `Basic ${auth}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ cancel_at_cycle_end: !!cancel_at_cycle_end }),
+    res.status(500).json({ 
+      success: false, 
+      error: error.message || 'Payment verification failed' 
     });
-    const text = await rpRes.text();
-    if (!rpRes.ok) {
-      try {
-        const j = JSON.parse(text);
-        return res.status(rpRes.status).json({ error: j?.error?.description || j?.error || text });
-      } catch {
-        return res.status(rpRes.status).json({ error: text });
-      }
-    }
-
-    // Update our DB subscription status by razorpay_subscription_id
-    const now = new Date().toISOString();
-    const { error } = await supabase
-      .from('subscriptions')
-      .update({ status: 'cancelled', canceled_at: now, updated_at: now })
-      .eq('razorpay_subscription_id', subId);
-    if (error) {
-      // Not fatal for client, but reportable
-      console.warn('Failed to update local subscription after cancel', error);
-    }
-
-    const data = JSON.parse(text);
-    return res.json(data);
-  } catch (e: any) {
-    return res.status(500).json({ error: e?.message || 'Failed to cancel subscription' });
   }
 });
+
+// Webhook handler for Razorpay events
+router.post('/webhook', express.raw({ type: 'application/json' }), async (req: Request, res: Response) => {
+  try {
+    const webhookSecret = process.env.RAZORPAY_WEBHOOK_SECRET;
+    if (!webhookSecret) {
+      return res.status(400).json({ error: 'Webhook secret not configured' });
+    }
+
+    const signature = req.headers['x-razorpay-signature'] as string;
+    if (!signature) {
+      return res.status(400).json({ error: 'Missing signature' });
+    }
+
+    // Verify webhook signature
+    const body = req.body;
+    const expectedSignature = crypto
+      .createHmac('sha256', webhookSecret)
+      .update(body)
+      .digest('hex');
+
+    if (expectedSignature !== signature) {
+      return res.status(400).json({ error: 'Invalid signature' });
+    }
+
+    const event = JSON.parse(body.toString());
+    console.log('Razorpay webhook event:', event.event);
+
+    // Handle different event types
+    switch (event.event) {
+      case 'payment.captured':
+        await handlePaymentCaptured(event.payload.payment.entity);
+        break;
+      case 'payment.failed':
+        await handlePaymentFailed(event.payload.payment.entity);
+        break;
+      case 'order.paid':
+        await handleOrderPaid(event.payload.order.entity);
+        break;
+      default:
+        console.log('Unhandled webhook event:', event.event);
+    }
+
+    res.json({ received: true });
+
+  } catch (error: any) {
+    console.error('Webhook error:', error);
+    res.status(500).json({ error: 'Webhook processing failed' });
+  }
+});
+
+// Helper function to handle payment captured event
+async function handlePaymentCaptured(payment: any) {
+  try {
+    const { error } = await supabase
+      .from('payments')
+      .update({ 
+        status: 'captured',
+        captured_at: new Date().toISOString()
+      })
+      .eq('razorpay_payment_id', payment.id);
+
+    if (error) {
+      console.error('Error updating payment status:', error);
+    }
+  } catch (error) {
+    console.error('Error in handlePaymentCaptured:', error);
+  }
+}
+
+// Helper function to handle payment failed event
+async function handlePaymentFailed(payment: any) {
+  try {
+    const { error } = await supabase
+      .from('payments')
+      .update({ 
+        status: 'failed',
+        failure_reason: payment.error_description || 'Payment failed'
+      })
+      .eq('razorpay_payment_id', payment.id);
+
+    if (error) {
+      console.error('Error updating payment status:', error);
+    }
+  } catch (error) {
+    console.error('Error in handlePaymentFailed:', error);
+  }
+}
+
+// Helper function to handle order paid event
+async function handleOrderPaid(order: any) {
+  try {
+    // Additional processing when order is fully paid
+    console.log('Order paid:', order.id);
+  } catch (error) {
+    console.error('Error in handleOrderPaid:', error);
+  }
+}
+
+// Helper function to send confirmation email
+async function sendConfirmationEmail(email: string, name: string, planName: string) {
+  try {
+    // Use your email service here
+    // This is a placeholder - implement based on your email provider
+    console.log(`Sending confirmation email to ${email} for ${planName} plan`);
+    
+    // Example with a simple email service call
+    const emailData = {
+      to: email,
+      subject: `Welcome to GENBOOK.AI ${planName} Plan!`,
+      template: 'subscription-confirmation',
+      context: {
+        user_name: name,
+        plan_name: planName,
+        app_name: 'GENBOOK.AI'
+      }
+    };
+
+    // Implement your email sending logic here
+    // await emailService.send(emailData);
+    
+  } catch (error) {
+    console.error('Error sending confirmation email:', error);
+    throw error;
+  }
+}
 
 export default router;
