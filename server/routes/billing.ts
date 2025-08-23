@@ -247,6 +247,8 @@ router.post('/create-subscription', async (req: Request, res: Response) => {
       error: 'Failed to create subscription',
       details: process.env.NODE_ENV === 'development' ? err.message : undefined
     });
+  }
+});
 
 // Cancel subscription
 router.post('/cancel-subscription', async (req: Request, res: Response) => {

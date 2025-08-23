@@ -49,6 +49,8 @@ const requireAuth = async (req: Request, res: Response, next: any) => {
 
 // Create Razorpay order
 router.post('/create-order', requireAuth, async (req: Request, res: Response) => {
+  
+  debugger;
   try {
     const { planId, amount, userDetails } = req.body;
     const user = (req as any).user;

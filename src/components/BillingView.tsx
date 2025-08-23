@@ -365,10 +365,26 @@ const BillingView: React.FC<BillingViewProps> = ({ user }) => {
       });
 
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Failed to create order');
+        let errorMessage = `Error ${response.status}: ${response.statusText}`;
+      
+        try {
+          // Try JSON
+          const data = await response.clone().json();
+          if (data?.message) {
+            errorMessage = data.message;
+          }
+        } catch {
+          // Fallback to text
+          const text = await response.clone().text();
+          if (text) {
+            errorMessage = text;
+          }
+        }
+      
+        throw new Error(errorMessage);
       }
-
+      
+      
       const orderData = await response.json();
 
       // Configure Razorpay options

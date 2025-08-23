@@ -114,30 +114,26 @@ const AuthModal: React.FC<AuthModalProps> = ({
     setIsSubmitting(true);
 
     try {
-      // Call backend to register tenant + admin
-      const apiBase = (import.meta as any)?.env?.VITE_BACKEND_URL ? String((import.meta as any).env.VITE_BACKEND_URL).replace(/\/$/, '') : '';
-      const res = await fetch(`${apiBase}/api/auth/register`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          organizationName: signUpData.organizationName,
-          adminEmail: signUpData.email,
-          adminPassword: signUpData.password,
-          adminName: signUpData.name,
-        }),
+      // Use Supabase's direct signUp method
+      const { data, error } = await supabase.auth.signUp({
+        email: signUpData.email,
+        password: signUpData.password,
+        options: {
+          data: {
+            name: signUpData.name,
+            organizationName: signUpData.organizationName,
+          },
+        },
       });
 
-      if (!res.ok) {
-        const payload = await (async () => { try { return await res.json(); } catch { return {}; } })();
-        const msg = payload?.error || payload?.message || `Failed to register (${res.status})`;
-        throw new Error(msg);
+      if (error) {
+        throw new Error(error.message || 'Failed to create account. Please try again.');
       }
 
       // Optionally send welcome email (non-blocking)
       try { await sendWelcomeEmail(signUpData.email, signUpData.name); } catch {}
 
-      setSuccess('Account created! Please check your email to confirm your address.');
-      // Notify parent that signup step is complete (may close modal or change view)
+      setSuccess('Account created! You are now logged in.');
       onAuthSuccess();
       resetForm();
     } catch (error: any) {

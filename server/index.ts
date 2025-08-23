@@ -26,7 +26,7 @@ interface ErrorWithStatus extends Error {
 }
 
 const app = express();
-const PORT = process.env.PORT || 3001;
+const PORT = 3001;
 const HOST = process.env.HOST || 'localhost';
 
 // Middleware
@@ -223,7 +223,8 @@ async function startServer() {
 
 // Start the server unless running in test environment
 if (process.env.NODE_ENV !== 'test') {
+  console.log('Starting server...');
   startServer();
 }
-
+console.log(process.env.NODE_ENV);
 export default app;

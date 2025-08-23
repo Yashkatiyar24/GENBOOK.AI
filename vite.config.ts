@@ -29,11 +29,11 @@ export default defineConfig({
     port: 5173,
     allowedHosts: ['genbookai.tech', 'localhost'],
     proxy: {
-      '/api': {
+      '^/(api|auth)': {
         target: 'http://127.0.0.1:3001',
         changeOrigin: true,
         secure: false,
-        rewrite: (path) => path.replace(/^\/api/, '/api')
+        rewrite: (path) => path
       },
     },
   },
