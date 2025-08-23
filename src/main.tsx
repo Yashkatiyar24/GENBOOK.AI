@@ -1,5 +1,6 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
+import { BrowserRouter } from 'react-router-dom'
 import './index.css'
 import * as Sentry from '@sentry/react'
 
@@ -60,7 +61,9 @@ async function bootstrap() {
     const App = (await import('./App.tsx')).default
     root.render(
       <StrictMode>
-        <App />
+        <BrowserRouter>
+          <App />
+        </BrowserRouter>
       </StrictMode>
     )
   } catch (err) {
