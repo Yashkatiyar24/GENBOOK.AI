@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { CreditCard, DollarSign, CheckCircle, X, Building, User, Mail, Phone } from 'lucide-react';
+import { CreditCard, CheckCircle, X, Building, User, Mail, Phone } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '../supabase';
 
@@ -38,7 +38,7 @@ const plans: Plan[] = [
   {
     id: 'professional',
     name: 'Professional',
-    price: 2900, // ₹29.00 in paise
+    price: 2900, // ₹29.00 in paise (monthly)
     interval: 'month',
     features: [
       'Unlimited appointments',
@@ -47,7 +47,7 @@ const plans: Plan[] = [
       'Custom branding',
       'Priority support'
     ],
-    razorpayPlanId: import.meta.env.VITE_RAZORPAY_PROFESSIONAL_PLAN_ID
+  razorpayPlanId: import.meta.env.VITE_RAZORPAY_PROFESSIONAL_PLAN_ID
   },
   {
     id: 'enterprise',
@@ -61,7 +61,7 @@ const plans: Plan[] = [
       'API access',
       '24/7 phone support'
     ],
-    razorpayPlanId: import.meta.env.VITE_RAZORPAY_ENTERPRISE_PLAN_ID
+  razorpayPlanId: import.meta.env.VITE_RAZORPAY_ENTERPRISE_PLAN_ID
   }
 ];
 
@@ -72,7 +72,8 @@ const UserDetailsModal: React.FC<{
   selectedPlan: Plan | null;
   onSubmit: (details: UserDetails) => void;
   isLoading: boolean;
-}> = ({ isOpen, onClose, selectedPlan, onSubmit, isLoading }) => {
+  billingCycle: 'monthly' | 'annual';
+}> = ({ isOpen, onClose, selectedPlan, onSubmit, isLoading, billingCycle }) => {
   const [userDetails, setUserDetails] = useState<UserDetails>({
     fullName: '',
     email: '',
@@ -140,6 +141,7 @@ const UserDetailsModal: React.FC<{
   };
 
   const formatPrice = (price: number) => {
+    // price is in paise; convert to rupees
     return new Intl.NumberFormat('en-IN', {
       style: 'currency',
       currency: 'INR',
@@ -160,7 +162,9 @@ const UserDetailsModal: React.FC<{
                 Upgrade to {selectedPlan?.name}
               </h2>
               <p className="text-gray-400 mt-1">
-                {selectedPlan && formatPrice(selectedPlan.price)}/month
+                {selectedPlan && (
+                  billingCycle === 'monthly' ? `${formatPrice(selectedPlan.price)}/month` : `${formatPrice(selectedPlan.price * 10)}/year`
+                )}
               </p>
             </div>
             <button
@@ -280,12 +284,13 @@ const UserDetailsModal: React.FC<{
   );
 };
 
-const BillingView: React.FC<BillingViewProps> = ({ user }) => {
+const BillingView: React.FC<BillingViewProps> = ({ user: _user }) => {
   const [showUserDetailsModal, setShowUserDetailsModal] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
   const [currentPlan, setCurrentPlan] = useState<string>('starter');
   const [isLoading, setIsLoading] = useState(false);
   const [subscription, setSubscription] = useState<any>(null);
+  const [billingCycle, setBillingCycle] = useState<'monthly' | 'annual'>('monthly');
 
   useEffect(() => {
     fetchCurrentSubscription();
@@ -316,9 +321,9 @@ const BillingView: React.FC<BillingViewProps> = ({ user }) => {
       toast.info('You are already on the Starter plan');
       return;
     }
-    
-    setSelectedPlan(plan);
-    setShowUserDetailsModal(true);
+  // mark plan selection with current billing cycle
+  setSelectedPlan(plan);
+  setShowUserDetailsModal(true);
   };
 
   const loadRazorpayScript = (): Promise<boolean> => {
@@ -349,6 +354,10 @@ const BillingView: React.FC<BillingViewProps> = ({ user }) => {
         throw new Error('Failed to load Razorpay. Please try again.');
       }
 
+      // Compute effective plan id and amount depending on billing cycle
+      const effectivePlanId = billingCycle === 'annual' ? `${selectedPlan.id}_annual` : selectedPlan.id;
+      const effectiveAmount = billingCycle === 'annual' ? selectedPlan.price * 10 : selectedPlan.price; // annual = 10x monthly
+
       // Create order on backend
       const { data: { session } } = await supabase.auth.getSession();
       const response = await fetch('/api/razorpay/create-order', {
@@ -358,8 +367,8 @@ const BillingView: React.FC<BillingViewProps> = ({ user }) => {
           'Authorization': `Bearer ${session?.access_token}`
         },
         body: JSON.stringify({
-          planId: selectedPlan.id,
-          amount: selectedPlan.price,
+          planId: effectivePlanId,
+          amount: effectiveAmount,
           userDetails: userDetails
         })
       });
@@ -387,7 +396,7 @@ const BillingView: React.FC<BillingViewProps> = ({ user }) => {
       
       const orderData = await response.json();
 
-      // Configure Razorpay options
+  // Configure Razorpay options
       const options = {
         key: import.meta.env.VITE_RAZORPAY_KEY_ID,
         amount: orderData.amount,
@@ -472,6 +481,7 @@ const BillingView: React.FC<BillingViewProps> = ({ user }) => {
   };
 
   const formatPrice = (price: number) => {
+    // price is stored in paise (integer). Convert to rupees for display.
     return new Intl.NumberFormat('en-IN', {
       style: 'currency',
       currency: 'INR',
@@ -487,9 +497,25 @@ const BillingView: React.FC<BillingViewProps> = ({ user }) => {
           <h1 className="text-3xl font-bold text-white mb-2">Billing & Subscription</h1>
           <p className="text-gray-400">Manage your subscription and billing details</p>
         </div>
-        <div className="flex items-center space-x-2">
-          <CreditCard className="w-5 h-5 text-cyan-400" />
-          <span className="text-cyan-400 font-medium">Secure Payments</span>
+        <div className="flex items-center space-x-4">
+          <div className="inline-flex items-center gap-2 rounded-lg bg-white/5 p-1 border border-white/10">
+            <button
+              onClick={() => setBillingCycle('monthly')}
+              className={`px-3 py-1 rounded-md text-sm transition-colors ${billingCycle === 'monthly' ? 'bg-cyan-500 text-black' : 'text-gray-300 hover:text-white'}`}
+            >
+              Monthly
+            </button>
+            <button
+              onClick={() => setBillingCycle('annual')}
+              className={`px-3 py-1 rounded-md text-sm transition-colors ${billingCycle === 'annual' ? 'bg-cyan-500 text-black' : 'text-gray-300 hover:text-white'}`}
+            >
+              Annual
+            </button>
+          </div>
+          <div className="flex items-center space-x-2">
+            <CreditCard className="w-5 h-5 text-cyan-400" />
+            <span className="text-cyan-400 font-medium">Secure Payments</span>
+          </div>
         </div>
       </div>
 
@@ -500,9 +526,12 @@ const BillingView: React.FC<BillingViewProps> = ({ user }) => {
           <div>
             <p className="text-2xl font-bold text-cyan-400 capitalize">{currentPlan}</p>
             <p className="text-gray-400">
-              {currentPlan === 'starter' ? 'Free plan' : 
-               currentPlan === 'professional' ? '₹29/month' : 
-               '₹99/month'}
+              {currentPlan === 'starter' ? 'Free plan' : (
+                (() => {
+                  const cp = plans.find(p => p.id === currentPlan);
+                  return cp ? `${formatPrice(cp.price)}/${cp.interval}` : 'Paid plan';
+                })()
+              )}
             </p>
             {subscription?.status && (
               <p className="text-sm text-gray-500 mt-1">
@@ -542,13 +571,16 @@ const BillingView: React.FC<BillingViewProps> = ({ user }) => {
                 <h3 className="text-xl font-bold text-white mb-2">{plan.name}</h3>
                 <div className="mb-2">
                   {plan.price === 0 ? (
-                    <span className="text-3xl font-bold text-cyan-400">Free</span>
-                  ) : (
-                    <>
-                      <span className="text-3xl font-bold text-white">{formatPrice(plan.price)}</span>
-                      <span className="text-gray-400">/{plan.interval}</span>
-                    </>
-                  )}
+                      <span className="text-3xl font-bold text-cyan-400">Free</span>
+                    ) : (
+                      <>
+                        {/* Display monthly or annual price. Annual price defaults to 10x monthly */}
+                        <span className="text-3xl font-bold text-white">
+                          {billingCycle === 'monthly' ? formatPrice(plan.price) : formatPrice(plan.price * 10)}
+                        </span>
+                        <span className="text-gray-400">/{billingCycle === 'monthly' ? 'month' : 'year'}</span>
+                      </>
+                    )}
                 </div>
                 <p className="text-gray-400 text-sm">
                   {plan.name === 'Starter' ? 'Perfect for getting started' :
@@ -598,7 +630,8 @@ const BillingView: React.FC<BillingViewProps> = ({ user }) => {
         }}
         selectedPlan={selectedPlan}
         onSubmit={handleUserDetailsSubmit}
-        isLoading={isLoading}
+  isLoading={isLoading}
+  billingCycle={billingCycle}
       />
     </div>
   );

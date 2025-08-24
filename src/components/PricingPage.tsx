@@ -209,7 +209,7 @@ const PricingPage: React.FC<PricingPageProps> = ({ onGetStarted, onSupport, onCo
                 <Shield className="h-5 w-5 text-cyan-300/80" />
               </div>
               <div className="mt-3 flex items-end gap-1">
-                <span className="text-4xl font-extrabold">{p.price === 0 ? 'Free' : `$${priceFor(p.price)}`}</span>
+                <span className="text-4xl font-extrabold">{p.price === 0 ? 'Free' : `₹${priceFor(p.price)}`}</span>
                 {p.price !== 0 && (
                   <span className="text-gray-400 mb-1 text-sm">{billingCycle === 'monthly' ? '/month' : '/year'}</span>
                 )}

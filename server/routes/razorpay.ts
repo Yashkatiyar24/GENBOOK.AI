@@ -13,16 +13,31 @@ const razorpay = new Razorpay({
 });
 
 // Plan configuration
+// Prices are stored in paise (INR * 100) to match Razorpay's expected integer amount
 const PLAN_CONFIG = {
   professional: {
     name: 'Professional',
     price: 2900, // ₹29.00 in paise
-    currency: 'INR'
+    currency: 'INR',
+    interval: 'month'
+  },
+  professional_annual: {
+    name: 'Professional',
+    price: 29000, // ₹290.00 in paise (annual)
+    currency: 'INR',
+    interval: 'year'
   },
   enterprise: {
     name: 'Enterprise',
     price: 9900, // ₹99.00 in paise
-    currency: 'INR'
+    currency: 'INR',
+    interval: 'month'
+  },
+  enterprise_annual: {
+    name: 'Enterprise',
+    price: 99000, // ₹990.00 in paise (annual)
+    currency: 'INR',
+    interval: 'year'
   }
 };
 
@@ -56,17 +71,19 @@ router.post('/create-order', requireAuth, async (req: Request, res: Response) =>
     const user = (req as any).user;
 
     if (!planId || !amount || !userDetails) {
-      return res.status(400).json({ error: 'Missing required fields' });
+      console.error('[Razorpay] Missing required fields:', { planId, amount, userDetails });
+      return res.status(400).json({ error: 'Missing required fields', debug: { planId, amount, userDetails } });
     }
 
     const planConfig = PLAN_CONFIG[planId as keyof typeof PLAN_CONFIG];
     if (!planConfig) {
-      return res.status(400).json({ error: 'Invalid plan selected' });
+      console.error('[Razorpay] Invalid plan selected:', planId);
+      return res.status(400).json({ error: 'Invalid plan selected', debug: { planId } });
     }
 
     // Create order with Razorpay
     const orderOptions = {
-      amount: planConfig.price, // Amount in paise
+      amount: planConfig.price, // Amount in paise (integer)
       currency: planConfig.currency,
       receipt: `order_${user.id}_${Date.now()}`,
       notes: {
@@ -80,39 +97,45 @@ router.post('/create-order', requireAuth, async (req: Request, res: Response) =>
       }
     };
 
-    const order = await razorpay.orders.create(orderOptions);
+    try {
+      const order = await razorpay.orders.create(orderOptions);
 
-    // Store order details in database for verification
-    const { error: dbError } = await supabase
-      .from('payment_orders')
-      .insert({
-        order_id: order.id,
-        user_id: user.id,
-        plan_id: planId,
-        amount: planConfig.price,
-        currency: planConfig.currency,
-        status: 'created',
-        user_details: userDetails,
-        created_at: new Date().toISOString()
+      // Store order details in database for verification
+      const { error: dbError } = await supabase
+        .from('payment_orders')
+        .insert({
+          order_id: order.id,
+          user_id: user.id,
+          plan_id: planId,
+          amount: planConfig.price,
+          currency: planConfig.currency,
+          status: 'created',
+          user_details: userDetails,
+          created_at: new Date().toISOString()
+        });
+
+      if (dbError) {
+        console.error('[Razorpay] Error storing order in DB:', dbError);
+        // Continue anyway, as order creation succeeded
+      }
+
+      res.json({
+        id: order.id,
+        amount: order.amount,
+        currency: order.currency,
+        receipt: order.receipt,
+        debug: { orderOptions }
       });
-
-    if (dbError) {
-      console.error('Error storing order:', dbError);
-      // Continue anyway, as order creation succeeded
+    } catch (rzpError: any) {
+      console.error('[Razorpay] Error creating order with Razorpay:', rzpError, { orderOptions });
+      return res.status(500).json({ error: rzpError.message || 'Failed to create order', debug: { orderOptions, rzpError } });
     }
 
-    res.json({
-      id: order.id,
-      amount: order.amount,
-      currency: order.currency,
-      receipt: order.receipt
-    });
-
   } catch (error: any) {
-    console.error('Create order error:', error);
+    console.error('[Razorpay] Unexpected error in create-order:', error);
     res.status(500).json({ 
       error: error.message || 'Failed to create order',
-      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+      debug: { error }
     });
   }
 });
@@ -158,9 +181,10 @@ router.post('/verify-payment', requireAuth, async (req: Request, res: Response) 
       });
     }
 
-    // Calculate subscription period
-    const now = new Date();
-    const periodEnd = new Date(now.getFullYear(), now.getMonth() + 1, now.getDate());
+  // Calculate subscription period based on plan interval
+  const now = new Date();
+  const monthsToAdd = planConfig.interval === 'year' ? 12 : 1;
+  const periodEnd = new Date(now.getFullYear(), now.getMonth() + monthsToAdd, now.getDate());
 
     // Update user subscription in database
     const { error: subscriptionError } = await supabase
