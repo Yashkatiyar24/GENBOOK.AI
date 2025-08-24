@@ -15,7 +15,7 @@ const plans = [
   {
     name: 'Professional Monthly',
     identifier: 'professional_monthly',
-    amount: 2900, // ₹29.00
+  amount: 2900, // ₹29.00
     currency: 'INR',
     interval: 'monthly',
     description: 'Professional plan with monthly billing',
@@ -31,7 +31,7 @@ const plans = [
   {
     name: 'Professional Yearly',
     identifier: 'professional_yearly',
-    amount: 29000, // ₹290.00 (equivalent to ~₹24.17/month)
+  amount: 29000, // ₹290.00 (equivalent to ~₹24.17/month)
     currency: 'INR',
     interval: 'yearly',
     description: 'Professional plan with yearly billing (2 months free)',

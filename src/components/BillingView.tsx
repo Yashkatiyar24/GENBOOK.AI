@@ -38,7 +38,7 @@ const plans: Plan[] = [
   {
     id: 'professional',
     name: 'Professional',
-    price: 2900, // ₹29.00 in paise (monthly)
+  price: 2900, // ₹29.00 in paise (monthly)
     interval: 'month',
     features: [
       'Unlimited appointments',
