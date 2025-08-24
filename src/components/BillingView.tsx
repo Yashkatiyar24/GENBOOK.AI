@@ -379,22 +379,23 @@ const BillingView: React.FC<BillingViewProps> = ({ user: _user }) => {
       });
 
       if (!response.ok) {
+        // Capture server response for debugging (try JSON first, fallback to text)
         let errorMessage = `Error ${response.status}: ${response.statusText}`;
-      
         try {
-          // Try JSON
           const data = await response.clone().json();
-          if (data?.message) {
-            errorMessage = data.message;
-          }
-        } catch {
-          // Fallback to text
-          const text = await response.clone().text();
-          if (text) {
-            errorMessage = text;
-          }
+          console.error('create-order response JSON:', data);
+          if (data?.message) errorMessage = data.message;
+          else if (data?.error) errorMessage = data.error;
+        } catch (e) {
+          try {
+            const text = await response.clone().text();
+            console.error('create-order response text:', text);
+            if (text) errorMessage = text;
+          } catch {}
         }
-      
+
+        // Show server-provided message in UI during development to aid debugging
+        toast.error(errorMessage);
         throw new Error(errorMessage);
       }
       
@@ -441,7 +442,22 @@ const BillingView: React.FC<BillingViewProps> = ({ user: _user }) => {
             });
 
             if (!verifyResponse.ok) {
-              throw new Error('Payment verification failed');
+                // Try to extract server error details
+                let vmsg = `Payment verification failed (${verifyResponse.status})`;
+                try {
+                  const vdata = await verifyResponse.clone().json();
+                  console.error('verify-payment response JSON:', vdata);
+                  if (vdata?.message) vmsg = vdata.message;
+                  else if (vdata?.error) vmsg = vdata.error;
+                } catch {
+                  try {
+                    const vtxt = await verifyResponse.clone().text();
+                    console.error('verify-payment response text:', vtxt);
+                    if (vtxt) vmsg = vtxt;
+                  } catch {}
+                }
+                toast.error(vmsg);
+                throw new Error(vmsg);
             }
 
             const result = await verifyResponse.json();

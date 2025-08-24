@@ -6,11 +6,12 @@ import { supabase } from '../supabase.js';
 
 const router = express.Router();
 
-// Initialize Razorpay
-const razorpay = new Razorpay({
-  key_id: process.env.RAZORPAY_KEY_ID || '',
-  key_secret: process.env.RAZORPAY_KEY_SECRET || ''
-});
+// Helper to create a Razorpay client from trimmed env values (avoids accidental whitespace)
+function getRazorpayClient() {
+  const keyId = (process.env.RAZORPAY_KEY_ID || '').toString().trim();
+  const keySecret = (process.env.RAZORPAY_KEY_SECRET || '').toString().trim();
+  return new Razorpay({ key_id: keyId, key_secret: keySecret });
+}
 
 // Plan configuration
 // Prices are stored in paise (INR * 100) to match Razorpay's expected integer amount
@@ -154,8 +155,8 @@ router.post('/create-order', requireAuth, async (req: Request, res: Response) =>
         });
       }
 
-      console.log('[Razorpay] Creating order with options:', orderOptions);
-      const order = await razorpay.orders.create(orderOptions);
+  console.log('[Razorpay] Creating order with options:', orderOptions);
+  const order = await getRazorpayClient().orders.create(orderOptions);
 
       // Store order details in database for verification
       const { error: dbError } = await supabase
@@ -227,8 +228,8 @@ router.post('/verify-payment', requireAuth, async (req: Request, res: Response) 
       });
     }
 
-    // Get order details from Razorpay to verify amount
-    const order = await razorpay.orders.fetch(razorpay_order_id);
+  // Get order details from Razorpay to verify amount
+  const order = await getRazorpayClient().orders.fetch(razorpay_order_id);
     const planConfig = PLAN_CONFIG[planId as keyof typeof PLAN_CONFIG];
 
     if (!planConfig || order.amount !== planConfig.price) {
