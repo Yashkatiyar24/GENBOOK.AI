@@ -65,6 +65,20 @@ const plans: Plan[] = [
   }
 ];
 
+// Format paise (integer) as INR currency string
+const formatPaise = (price: number) => {
+  return new Intl.NumberFormat('en-IN', {
+    style: 'currency',
+    currency: 'INR',
+    minimumFractionDigits: 0,
+  }).format(price / 100);
+};
+
+const displayPriceFor = (plan: Plan | null, cycle: 'monthly' | 'annual') => {
+  if (!plan) return '';
+  return cycle === 'monthly' ? `${formatPaise(plan.price)}/month` : `${formatPaise(plan.price * 10)}/year`;
+};
+
 // User Details Modal Component
 const UserDetailsModal: React.FC<{
   isOpen: boolean;
@@ -140,14 +154,7 @@ const UserDetailsModal: React.FC<{
     }
   };
 
-  const formatPrice = (price: number) => {
-    // price is in paise; convert to rupees
-    return new Intl.NumberFormat('en-IN', {
-      style: 'currency',
-      currency: 'INR',
-      minimumFractionDigits: 0,
-    }).format(price / 100);
-  };
+  // use top-level formatter directly
 
   if (!isOpen) return null;
 
@@ -162,9 +169,7 @@ const UserDetailsModal: React.FC<{
                 Upgrade to {selectedPlan?.name}
               </h2>
               <p className="text-gray-400 mt-1">
-                {selectedPlan && (
-                  billingCycle === 'monthly' ? `${formatPrice(selectedPlan.price)}/month` : `${formatPrice(selectedPlan.price * 10)}/year`
-                )}
+                {selectedPlan && displayPriceFor(selectedPlan, billingCycle)}
               </p>
             </div>
             <button
@@ -248,7 +253,7 @@ const UserDetailsModal: React.FC<{
             <div className="flex justify-between items-center">
               <span className="text-gray-300">{selectedPlan?.name} Plan</span>
               <span className="text-white font-bold">
-                {selectedPlan && formatPrice(selectedPlan.price)}/month
+                {selectedPlan && displayPriceFor(selectedPlan, billingCycle)}
               </span>
             </div>
           </div>

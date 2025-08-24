@@ -44,6 +44,15 @@ const PLAN_CONFIG = {
 // Middleware to verify authentication
 const requireAuth = async (req: Request, res: Response, next: any) => {
   try {
+    // Development-only bypass: if X-Skip-Auth header is present and we're not in production,
+    // attach a lightweight fake user and continue. This is useful for local testing only.
+    if (process.env.NODE_ENV !== 'production' && (req.headers['x-skip-auth'] === 'true' || req.headers['x-skip-auth'] === '1')) {
+      (req as any).user = {
+        id: process.env.TEST_USER_ID || 'local-test-user',
+        email: process.env.TEST_USER_EMAIL || 'test@example.com'
+      };
+      return next();
+    }
     const token = req.headers.authorization?.replace('Bearer ', '');
     if (!token) {
       return res.status(401).json({ error: 'Authorization token required' });
@@ -64,6 +73,16 @@ const requireAuth = async (req: Request, res: Response, next: any) => {
 
 // Create Razorpay order
 router.post('/create-order', requireAuth, async (req: Request, res: Response) => {
+  try {
+    // Early check for Razorpay credentials to give a clear error instead of a vague 500
+    if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
+      console.error('[Razorpay] Missing Razorpay credentials in environment variables');
+      return res.status(500).json({ error: 'Razorpay credentials not configured on server', debug: { RAZORPAY_KEY_ID: !!process.env.RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET: !!process.env.RAZORPAY_KEY_SECRET } });
+    }
+  } catch (err) {
+    console.error('[Razorpay] Error during credentials check:', err);
+    return res.status(500).json({ error: 'Server misconfiguration', debug: { err: (err as any).message } });
+  }
   
   debugger;
   try {
@@ -98,6 +117,44 @@ router.post('/create-order', requireAuth, async (req: Request, res: Response) =>
     };
 
     try {
+      // Development-only mock: if X-Mock-Razorpay header is present or TEST_RAZORPAY_MOCK is true,
+      // return a fake order object so local testing works without valid Razorpay credentials.
+      const isMock = process.env.NODE_ENV !== 'production' && (req.headers['x-mock-razorpay'] === '1' || req.headers['x-mock-razorpay'] === 'true' || process.env.TEST_RAZORPAY_MOCK === 'true');
+      if (isMock) {
+        console.log('[Razorpay] Mock mode enabled - returning fake order for local testing', { orderOptions });
+        const fakeOrder = {
+          id: `order_fake_${Date.now()}`,
+          amount: orderOptions.amount,
+          currency: orderOptions.currency,
+          receipt: orderOptions.receipt
+        };
+
+        // Store fake order in DB for parity with real flow (best-effort)
+        try {
+          await supabase.from('payment_orders').insert({
+            order_id: fakeOrder.id,
+            user_id: user.id,
+            plan_id: planId,
+            amount: planConfig.price,
+            currency: planConfig.currency,
+            status: 'created',
+            user_details: userDetails,
+            created_at: new Date().toISOString()
+          });
+        } catch (dbErr) {
+          console.warn('[Razorpay] Failed to store mock order in DB:', dbErr);
+        }
+
+        return res.json({
+          id: fakeOrder.id,
+          amount: fakeOrder.amount,
+          currency: fakeOrder.currency,
+          receipt: fakeOrder.receipt,
+          debug: { orderOptions, mock: true }
+        });
+      }
+
+      console.log('[Razorpay] Creating order with options:', orderOptions);
       const order = await razorpay.orders.create(orderOptions);
 
       // Store order details in database for verification

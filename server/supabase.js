@@ -7,8 +7,16 @@ import { dirname, join } from 'path';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-// Load environment variables from .env file in the server directory
-dotenv.config({ path: join(__dirname, '.env') });
+// Load environment variables from project root first, then allow server/.env to
+// override values if present (matches other server scripts).
+try {
+  const rootEnv = join(dirname(__dirname), '.env');
+  dotenv.config({ path: rootEnv });
+} catch {}
+try {
+  const serverEnv = join(__dirname, '.env');
+  dotenv.config({ path: serverEnv });
+} catch {}
 
 // Get Supabase credentials from environment variables
 const supabaseUrl = process.env.SUPABASE_URL;

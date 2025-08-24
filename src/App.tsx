@@ -75,6 +75,25 @@ function App() {
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authMode, setAuthMode] = useState<'signin' | 'signup'>('signin');
   const [loading, setLoading] = useState(true);
+  // If a part of the app requests the auth modal while we are still
+  // resolving the initial session, store the request and process it
+  // after loading completes. This prevents the modal from flashing on
+  // page refresh when a valid session may still be established.
+  const [pendingAuthRequest, setPendingAuthRequest] = useState<'signin' | 'signup' | null>(null);
+
+  // Request showing the auth modal in a safe way. If the auth system
+  // is still loading the initial session, defer the request.
+  function requestShowAuth(mode: 'signin' | 'signup') {
+    if (!loading) {
+      // Only open if there's no authenticated user
+      if (!user) {
+        setAuthMode(mode);
+        setShowAuthModal(true);
+      }
+    } else {
+      setPendingAuthRequest(mode);
+    }
+  }
   // Bottom sheet state
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [sheetView, setSheetView] = useState<'get-started' | 'support' | 'contact'>('get-started');
@@ -103,8 +122,8 @@ function App() {
       if (!t) return;
       // If user not logged in and trying to navigate to protected tab via URL, block and show auth
       if (!user && protectedTabs.has(t)) {
-        setAuthMode('signin');
-        setShowAuthModal(true);
+        // Use requestShowAuth to avoid opening while initial session is resolving
+        requestShowAuth('signin');
         // Revert hash to dashboard without triggering another modal
         const safe = '#/dashboard';
         if (window.location.hash !== safe) window.location.hash = safe;
@@ -314,8 +333,7 @@ function App() {
   const handleTabChange = (tab: string) => {
     // If the tab is protected and no user, show auth modal and abort
     if (!user && protectedTabs.has(tab)) {
-      setAuthMode('signin');
-      setShowAuthModal(true);
+  requestShowAuth('signin');
       return;
     }
 
@@ -350,15 +368,25 @@ function App() {
     }
   };
 
+  // If an auth request was queued while we were loading the initial
+  // session, process it now that loading has finished.
+  useEffect(() => {
+    if (!loading && pendingAuthRequest) {
+      // If user became authenticated while loading, do not open modal
+      if (!user) {
+        requestShowAuth(pendingAuthRequest);
+      }
+      setPendingAuthRequest(null);
+    }
+  }, [loading, pendingAuthRequest, user]);
+
   // Authentication handlers
   const handleSignIn = () => {
-    setAuthMode('signin');
-    setShowAuthModal(true);
+  requestShowAuth('signin');
   };
 
   const handleJoinNow = () => {
-    setAuthMode('signup');
-    setShowAuthModal(true);
+  requestShowAuth('signup');
   };
 
   const handleSignOut = async () => {
@@ -391,8 +419,7 @@ function App() {
   const handleBookSuggestion = async (suggestion: AISuggestion) => {
     if (!user) {
       // If user is not logged in, show auth modal
-      setAuthMode('signin');
-      setShowAuthModal(true);
+  requestShowAuth('signin');
       return;
     }
 
@@ -426,7 +453,7 @@ function App() {
   const handleFeatureSubmit = async (formData: any) => {
     if (!user) {
       alert('Please sign in to book a feature.');
-      setShowAuthModal(true);
+  requestShowAuth('signin');
       return;
     }
 
