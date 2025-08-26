@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 410 404" width="32" height="32" role="img" aria-label="Vite">
+  <defs>
+    <linearGradient id="vite1" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0%" stop-color="#41D1FF"/>
+      <stop offset="100%" stop-color="#BD34FE"/>
+    </linearGradient>
+    <linearGradient id="vite2" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0%" stop-color="#FFEA83"/>
+      <stop offset="8.333%" stop-color="#FFDD35"/>
+      <stop offset="100%" stop-color="#FFA800"/>
+    </linearGradient>
+  </defs>
+  <path fill="url(#vite1)" d="M399.641 35.39c3.935-9.78-6.055-19.42-15.63-15.225L21.735 178.49a10 10 0 0 0-1.675 17.45l72.29 52.38a10 10 0 0 0 10.535.57L380.28 58.706a10 10 0 0 1 14.68 11.543l-62.742 243.44a10 10 0 0 1-16.218 5.37L195.9 234.62a10 10 0 0 0-13.383 1.312l-72.055 77.39a10 10 0 0 1-16.718-3.59L2.321 112.17a10 10 0 0 1 4.32-11.735L384.01 20.165c6.83-3.94 15.41-.54 15.63 6.55z"/>
+  <path fill="url(#vite2)" d="M284.54 55.64c2.37-7.12-5.66-13.3-11.84-8.93l-137.8 96.93a10 10 0 0 0-2.36 2.4l-23.36 31.94c-3.88 5.3 2.73 12.02 8.26 8.86l30.73-17.54a10 10 0 0 1 9.74.2l55.64 33.19a10 10 0 0 0 14.94-7.77l3.62-67.96a10 10 0 0 1 4.35-7.48l46.58-34.86a10 10 0 0 0 2.62-2.98l-1.49-25z"/>
+</svg>
