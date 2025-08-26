@@ -3,6 +3,10 @@ import react from '@vitejs/plugin-react'
 import path from 'path'
 import { visualizer } from 'rollup-plugin-visualizer'
 
+<<<<<<< HEAD
+=======
+// https://vitejs.dev/config/
+>>>>>>> def17f3ceeefe0efd14d4fab3df1f2b8fd7a41db
 export default defineConfig({
   plugins: [
     react(),
@@ -29,11 +33,22 @@ export default defineConfig({
     allowedHosts: ['genbookai.tech', 'localhost'],
     proxy: {
       '^/(api|auth)': {
+<<<<<<< HEAD
         target: `http://127.0.0.1:${process.env.API_PORT || 3001}`, // ✅ API_PORT env se lega
         changeOrigin: true,
         secure: false,
+=======
+        target: 'http://127.0.0.1:3001',
+        changeOrigin: true,
+        secure: false,
+        rewrite: (path) => path
+>>>>>>> def17f3ceeefe0efd14d4fab3df1f2b8fd7a41db
       },
     },
   },
   base: process.env.NODE_ENV === 'production' ? '/' : '/',
+<<<<<<< HEAD
 })
+=======
+})
+>>>>>>> def17f3ceeefe0efd14d4fab3df1f2b8fd7a41db

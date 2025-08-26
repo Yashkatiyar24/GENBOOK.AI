@@ -26,6 +26,7 @@ interface ErrorWithStatus extends Error {
 }
 
 const app = express();
+<<<<<<< HEAD
 // O
 // const PORT = 3001;
 
@@ -35,6 +36,11 @@ const HOST = process.env.HOST || 'localhost';
 
 
 
+=======
+const PORT = 3001;
+const HOST = process.env.HOST || 'localhost';
+
+>>>>>>> def17f3ceeefe0efd14d4fab3df1f2b8fd7a41db
 // Middleware
 // CORS allowlist from env
 const allowedOrigins = (process.env.ALLOWED_ORIGINS || '*')
