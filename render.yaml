@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: genbook-backend
+    rootDir: server
+    buildCommand: "npm install && npm run build"
+    startCommand: "node dist/index.js"
+    env: node
+    plan: free
+
+  - type: static_site
+    name: genbook-frontend
+    rootDir: client
+    buildCommand: "npm install && npm run build"
+    publishDir: build
+    plan: free
