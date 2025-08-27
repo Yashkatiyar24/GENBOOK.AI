@@ -8,11 +8,11 @@
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "outDir": "./dist",
-    "rootDir": "..",
-    "baseUrl": "..",
+    "rootDir": ".",
+    "baseUrl": ".",
     "paths": {
-      "@/*": ["src/*"],
-      "@server/*": ["server/*"]
+      "@/*": ["../src/*"],
+      "@server/*": ["./*"]
     },
     "types": ["node"],
     "allowJs": true,
