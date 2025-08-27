@@ -472,7 +472,7 @@ const BillingView: React.FC<BillingViewProps> = ({ user: _user }) => {
 
       // Create order on backend
       const { data: { session } } = await supabase.auth.getSession();
-      const response = await fetch(`${apiBase}/razorpay/create-order`, {
+      const response = await fetch(`/api/razorpay/create-order`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
