@@ -18,7 +18,8 @@
     "test": "jest",
     "test:frontend": "jest -c jest.config.js",
     "test:server": "jest -c jest.server.config.js",
-    "test:watch": "jest --watch"
+    "test:watch": "jest --watch",
+    "start": "node dist-server/index.js"
   },
   "dependencies": {
     "@radix-ui/react-avatar": "^1.1.10",
