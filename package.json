@@ -1,19 +1,19 @@
 {
-  "name": "vite-react-typescript-starter",
+  "name": "genbook-ai",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
   "type": "module",
   "scripts": {
     "dev:client": "vite",
     "dev:server": "tsx watch server/index.ts",
     "dev": "concurrently -k -n client,server -c cyan,green \"npm run dev:client\" \"npm run dev:server\"",
     "dev:inspect": "node --inspect ./node_modules/vite/bin/vite.js dev",
-    "build": "vite build",
+    "build": "vite build && npm run build:server",
     "build:server": "tsc -p tsconfig.server.json",
     "start:server": "node dist-server/index.js",
     "analyze": "ANALYZE=1 vite build",
     "lint": "eslint .",
-    "preview": "vite preview",
+    "preview": "vite preview --host 0.0.0.0 --port $PORT",
     "email:dev": "node server/emailServer.mjs",
     "test": "jest",
     "test:frontend": "jest -c jest.config.js",
@@ -39,7 +39,7 @@
     "@stripe/stripe-js": "^7.8.0",
     "@supabase/auth-helpers-nextjs": "^0.10.0",
     "@supabase/supabase-js": "^2.55.0",
-    "@types/dotenv": "^6.1.1",
+    "@types/dotenv": "^8.2.0",
     "@types/handlebars": "^4.0.40",
     "@types/jspdf": "^1.3.3",
     "@types/nodemailer": "^6.4.17",
@@ -49,7 +49,7 @@
     "clsx": "^2.1.1",
     "cors": "^2.8.5",
     "crypto": "^1.0.1",
-    "dotenv": "^17.2.1",
+    "dotenv": "^16.4.5",
     "express": "^5.1.0",
     "express-rate-limit": "^8.0.1",
     "framer-motion": "^12.23.12",
@@ -98,6 +98,7 @@
     "@vitejs/plugin-react": "^4.3.1",
     "autoprefixer": "^10.4.18",
     "babel-jest": "^30.0.5",
+    "concurrently": "^9.0.0",
     "eslint": "^9.9.1",
     "eslint-plugin-react-hooks": "^5.1.0-rc.0",
     "eslint-plugin-react-refresh": "^0.4.11",
@@ -117,7 +118,6 @@
     "tsx": "^4.20.4",
     "typescript": "^5.9.2",
     "typescript-eslint": "^8.3.0",
-    "vite": "^7.1.2",
-    "concurrently": "^9.0.0"
+    "vite": "^7.1.2"
   }
 }
