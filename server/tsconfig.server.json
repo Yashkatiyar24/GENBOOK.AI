@@ -12,7 +12,8 @@
     "resolveJsonModule": true,                  // ✅ in case you import JSON
     "forceConsistentCasingInFileNames": true,
     "skipLibCheck": true,
-    "typeRoots": ["./types", "./node_modules/@types"]  // ✅ for custom module stubs
+    "typeRoots": ["./types", "./node_modules/@types"],
+    "types": []   // ✅ for custom module stubs
   },
   "include": ["./**/*.ts", "./**/*.d.ts"],      // ✅ include both .ts and .d.ts
   "exclude": ["node_modules", "__tests__"]
