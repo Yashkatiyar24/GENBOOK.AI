@@ -80,12 +80,13 @@ export const updateSubscription = async (
     
     // Create a new subscription with the new plan
     const newSubscription = await razorpay.subscriptions.create({
-      plan_id: newPlanId,
-      customer_notify: 1,
-      total_count: 12,
-      notes: currentSub.notes,
-      notify_info: currentSub.notify_info
-    });
+  plan_id: newPlanId,
+  customer_notify: 1,
+  total_count: 12,
+  notes: currentSub.notes,
+  notify_info: (currentSub as any).notify_info, // 👈 bypass type check
+});
+
 
     // Cancel the old subscription
     await razorpay.subscriptions.cancel(subscriptionId);
