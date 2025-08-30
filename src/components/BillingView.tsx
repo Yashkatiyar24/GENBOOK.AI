@@ -460,7 +460,7 @@ const BillingView: React.FC<BillingViewProps> = ({ user: _user }) => {
     
     try {
       // Prefer proxy (/api). If a VITE_API_BASE_URL is provided, use that instead (helps when proxy is misconfigured)
-      const apiBase = (import.meta as any).env?.API_BASE_URL || '/api';
+      const apiBase = (import.meta as any).env?.VITE_API_BASE_URL || '/api';
       // Load Razorpay script
       const scriptLoaded = await loadRazorpayScript();
       if (!scriptLoaded) {
