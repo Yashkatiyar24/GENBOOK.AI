@@ -470,6 +470,7 @@ const BillingView: React.FC<BillingViewProps> = ({ user: _user }) => {
       // Compute effective plan id and amount depending on billing cycle
       const effectivePlanId = billingCycle === 'annual' ? `${selectedPlan.id}_annual` : selectedPlan.id;
       const effectiveAmount = billingCycle === 'annual' ? selectedPlan.price * 10 : selectedPlan.price;
+alert(apiBase)
       // Create order on backend
       const { data: { session } } = await supabase.auth.getSession();
       const response = await fetch(`${apiBase}/razorpay/create-order`, {
