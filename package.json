@@ -8,7 +8,7 @@
     "dev:server": "tsx watch server/index.ts",
     "dev": "concurrently -k -n client,server -c cyan,green \"npm run dev:client\" \"npm run dev:server\"",
     "dev:inspect": "node --inspect ./node_modules/vite/bin/vite.js dev",
-    "build": "vite build && npm run build:server",
+    "build": "vite build",
     "build:server": "tsc -p tsconfig.server.json",
     "start:server": "node dist-server/index.js",
     "analyze": "ANALYZE=1 vite build",
