@@ -3,6 +3,7 @@ import { CreditCard, CheckCircle, X, Building, User, Mail, Phone, Loader2, Alert
 import { toast } from 'sonner';
 import { supabase } from '../supabase';
 
+
 interface Plan {
   id: string;
   name: string;
@@ -472,7 +473,7 @@ const BillingView: React.FC<BillingViewProps> = ({ user: _user }) => {
 
       // Create order on backend
       const { data: { session } } = await supabase.auth.getSession();
-      const response = await fetch(`/api/razorpay/create-order`, {
+      const response = await fetch(`${apiBase}/razorpay/create-order`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
