@@ -1,0 +1,20 @@
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "module": "ES2020",                         // ✅ was CommonJS → now supports import.meta
+    "moduleResolution": "Node",                 // ✅ Node-style resolution
+    "outDir": "../dist-server",
+    "rootDir": "./",
+    "strict": false,                            // ✅ turn off strict to avoid implicit any errors
+    "noImplicitAny": false,                     // ✅ allow untyped params for now
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,       // ✅ smoother interop with JS
+    "resolveJsonModule": true,                  // ✅ in case you import JSON
+    "forceConsistentCasingInFileNames": true,
+    "skipLibCheck": true,
+    "typeRoots": ["./types", "./node_modules/@types"],
+    "types": []   // ✅ for custom module stubs
+  },
+  "include": ["./**/*.ts", "./**/*.d.ts"],      // ✅ include both .ts and .d.ts
+  "exclude": ["node_modules", "__tests__"]
+}
