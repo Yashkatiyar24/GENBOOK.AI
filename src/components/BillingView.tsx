@@ -473,11 +473,7 @@ const BillingView: React.FC<BillingViewProps> = ({ user: _user }) => {
       const effectiveAmount = billingCycle === 'annual' ? selectedPlan.price * 10 : selectedPlan.price;
       // Create order on backend
       const { data: { session } } = await supabase.auth.getSession();
-<<<<<<< HEAD
       const response = await fetch(`/api/razorpay/create-order`, {
-=======
-  const response = await fetch(`/api/razorpay/create-order`, {
->>>>>>> 233a493 (Initial commit with payment fix and setup)
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
