@@ -473,14 +473,16 @@ const BillingView: React.FC<BillingViewProps> = ({ user: _user }) => {
       const effectiveAmount = billingCycle === 'annual' ? selectedPlan.price * 10 : selectedPlan.price;
       // Create order on backend
       const { data: { session } } = await supabase.auth.getSession();
-      const response = await fetch(`/api/razorpay/create-order`, {
+      if (!session?.access_token) {
+        toast.error('Please log in to continue with payment.');
+        setIsLoading(false);
+        return;
+      }
+      const response = await fetch('https://genbook-ai-8yom.onrender.com/api/razorpay/create-order', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...(session?.access_token
-            ? { 'Authorization': `Bearer ${session.access_token}` }
-            : { ...(import.meta.env.DEV ? { 'X-Skip-Auth': 'true', 'X-Mock-Razorpay': 'true' } : {}) }
-          )
+          'Authorization': `Bearer ${session.access_token}`
         },
         body: JSON.stringify({
           planId: effectivePlanId,

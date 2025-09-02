@@ -46,24 +46,19 @@ const HOST = process.env.HOST || 'localhost';
 
 // Middleware
 // CORS allowlist from env
-const allowedOrigins = (process.env.ALLOWED_ORIGINS || '*')
-  .split(',')
-  .map((o) => o.trim())
-  .filter(Boolean);
-
-// Add localhost origins for development
-const devOrigins = ['http://localhost:3000', 'http://localhost:5173', 'http://localhost:5174', 'http://localhost:5175'];
-const allAllowedOrigins = allowedOrigins.includes('*') ? ['*'] : [...allowedOrigins, ...devOrigins];
-
-const corsOptions: cors.CorsOptions = {
-  origin: (origin, callback) => {
-    if (!origin) return callback(null, true); // allow same-origin/no-origin (e.g., curl, mobile apps)
-    if (allAllowedOrigins.includes('*') || allAllowedOrigins.includes(origin)) return callback(null, true);
-    return callback(new Error('Not allowed by CORS'));
-  },
-  credentials: true,
-};
-app.use(cors(corsOptions));
+const allowedOrigins = [
+  'http://localhost:5173',
+  'http://localhost:3000',
+  'http://localhost:5174',
+  'http://localhost:5175',
+  'https://www.genbookai.tech',
+  'https://genbook-ai-git-main-yashkatiyar2405-gmailcoms-projects.vercel.app',
+  'https://genbook-bmepw9j5b-yashkatiyar2405-gmailcoms-projects.vercel.app'
+];
+app.use(cors({
+  origin: allowedOrigins,
+  credentials: true
+}));
 // Security headers
 app.use(helmet());
 
