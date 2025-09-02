@@ -1,6 +1,86 @@
-import { createClient } from '@supabase/supabase-js'
+import { createClient, type User, type AuthChangeEvent, type Session } from '@supabase/supabase-js'
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey)
+if (!supabaseUrl || !supabaseAnonKey) {
+  throw new Error(`
+    Missing Supabase environment variables.
+    Please check your .env file and ensure the following are set:
+    - VITE_SUPABASE_URL
+    - VITE_SUPABASE_ANON_KEY
+  `)
+}
+
+type AuthChangeHandler = (event: AuthChangeEvent, session: Session | null) => void
+
+const options = {
+  auth: {
+    autoRefreshToken: true,
+    persistSession: true,
+    detectSessionInUrl: true,
+    debug: import.meta.env.DEV
+  }
+}
+
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, options)
+
+// Helper function to handle auth state changes
+export const handleAuthStateChange: AuthChangeHandler = (event, session) => {
+  if (event === 'SIGNED_IN' && session?.user) {
+    console.log('User signed in:', session.user.email)
+  } else if (event === 'SIGNED_OUT') {
+    console.log('User signed out')
+  }
+}
+
+// Initialize auth state listener
+supabase.auth.onAuthStateChange(handleAuthStateChange)
+
+// Export auth functions for easier access
+export const signUp = async (email: string, password: string, userData?: Record<string, any>) => {
+  try {
+    console.log('Attempting to sign up user with email:', email);
+    const result = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: userData,
+        emailRedirectTo: `${window.location.origin}/dashboard`
+      }
+    });
+
+    if (result.error) {
+      console.error('Signup error:', result.error);
+      if (result.error.message.includes('already registered')) {
+        throw new Error('This email is already registered. Please sign in instead.');
+      } else if (result.error.message.includes('password')) {
+        throw new Error('Please choose a stronger password.');
+      } else {
+        throw new Error(result.error.message || 'Failed to create account. Please try again.');
+      }
+    }
+
+    console.log('Signup successful, user:', result.data.user);
+    return result;
+  } catch (error: any) {
+    console.error('Signup error details:', error);
+    throw error;
+  }
+}
+
+export const signIn = async (email: string, password: string) => {
+  return await supabase.auth.signInWithPassword({
+    email,
+    password
+  })
+}
+
+export const signOut = async () => {
+  return await supabase.auth.signOut()
+}
+
+export const getCurrentUser = async (): Promise<User | null> => {
+  const { data: { user } } = await supabase.auth.getUser()
+  return user
+}

@@ -129,11 +129,6 @@ const AuthModal = ({
     setShowConfirmPassword(false);
   };
 
-  const handleClose = () => {
-    resetForm();
-    onClose();
-  };
-
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -211,9 +206,6 @@ const AuthModal = ({
       }
     } finally {
       setIsSubmitting(false);
-    }
-  };
-
   // Function to send welcome email
   const sendWelcomeEmail = async (email: string, name: string) => {
     try {
@@ -245,16 +237,24 @@ const AuthModal = ({
     }
   };
 
-  if (!isOpen) return null;
+  const resetForm = () => {
+    setSignInData({ email: signInData.email, password: '' }); // Keep email for convenience
+    setSignUpData(prev => ({
+      ...prev,
+      password: '',
+      confirmPassword: '',
+      agreeToTerms: false
+    }));
+    setError(null);
+    setSuccess(null);
+    setShowPassword(false);
+    setShowConfirmPassword(false);
+  };
 
-  if (isLoading) {
-    return (
-      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-        <div className="bg-black/90 backdrop-blur-xl border border-cyan-500/20 rounded-2xl p-8 text-center">
-          <Loader2 className="w-8 h-8 text-cyan-400 animate-spin mx-auto mb-4" />
-          <p className="text-white">Loading...</p>
-        </div>
-      </div>
+  const handleClose = () => {
+    resetForm();
+    return;
+  }
     );
   }
 
@@ -379,7 +379,7 @@ const AuthModal = ({
                     onClick={() => onModeChange('signup')}
                     className="text-cyan-400 hover:text-cyan-300 transition-colors font-medium"
                   >
-                    Sign Up
+                    Join Now
                   </button>
                 </p>
               </div>
@@ -396,25 +396,22 @@ const AuthModal = ({
                   type="text"
                   value={signUpData.organizationName}
                   onChange={(e) => setSignUpData(prev => ({ ...prev, organizationName: e.target.value }))}
-                  required
                   className="w-full px-4 py-3 bg-black/30 border border-cyan-500/20 rounded-lg focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 transition-colors"
-                  placeholder="Your organization name"
+                  placeholder="Your company or team name"
                 />
               </div>
-
               {/* Name */}
               <div className="space-y-2">
                 <label className="flex items-center text-sm font-medium text-gray-300">
                   <User className="w-4 h-4 mr-2 text-cyan-400" />
-                  Full Name *
+                  Full Name
                 </label>
                 <input
                   type="text"
                   value={signUpData.name}
                   onChange={(e) => setSignUpData(prev => ({ ...prev, name: e.target.value }))}
-                  required
                   className="w-full px-4 py-3 bg-black/30 border border-cyan-500/20 rounded-lg focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 transition-colors"
-                  placeholder="Your full name"
+                  placeholder="Enter your full name"
                 />
               </div>
 
@@ -430,7 +427,7 @@ const AuthModal = ({
                   onChange={(e) => setSignUpData(prev => ({ ...prev, email: e.target.value }))}
                   required
                   className="w-full px-4 py-3 bg-black/30 border border-cyan-500/20 rounded-lg focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 transition-colors"
-                  placeholder="your.email@example.com"
+                  placeholder="Enter your email"
                 />
               </div>
 
@@ -446,9 +443,9 @@ const AuthModal = ({
                     value={signUpData.password}
                     onChange={(e) => setSignUpData(prev => ({ ...prev, password: e.target.value }))}
                     required
-                    minLength={8}
+                    minLength={6}
                     className="w-full px-4 py-3 bg-black/30 border border-cyan-500/20 rounded-lg focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 transition-colors pr-12"
-                    placeholder="At least 8 characters"
+                    placeholder="Create a password"
                   />
                   <button
                     type="button"
@@ -472,7 +469,7 @@ const AuthModal = ({
                     value={signUpData.confirmPassword}
                     onChange={(e) => setSignUpData(prev => ({ ...prev, confirmPassword: e.target.value }))}
                     required
-                    minLength={8}
+                    minLength={6}
                     className="w-full px-4 py-3 bg-black/30 border border-cyan-500/20 rounded-lg focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 transition-colors pr-12"
                     placeholder="Confirm your password"
                   />
