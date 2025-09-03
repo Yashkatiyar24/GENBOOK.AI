@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback, FC } from 'react';
 import { Mic, MicOff, X } from 'lucide-react';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
-import { useFeatureAccess } from '@/hooks/useFeatureAccess';
+import { useFeatureAccess } from './useFeatureAccess';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 
