@@ -1,4 +1,4 @@
-import { createClient, type User, type AuthChangeEvent, type Session } from '@supabase/supabase-js'
+import { createClient, type User, type AuthChangeEvent, type Session, type SupabaseClient } from '@supabase/supabase-js'
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
@@ -14,16 +14,14 @@ if (!supabaseUrl || !supabaseAnonKey) {
 
 type AuthChangeHandler = (event: AuthChangeEvent, session: Session | null) => void
 
-const options = {
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: true,
     debug: import.meta.env.DEV
   }
-}
-
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, options)
+})
 
 // Helper function to handle auth state changes
 export const handleAuthStateChange: AuthChangeHandler = (event, session) => {
@@ -36,6 +34,8 @@ export const handleAuthStateChange: AuthChangeHandler = (event, session) => {
 
 // Initialize auth state listener
 supabase.auth.onAuthStateChange(handleAuthStateChange)
+
+export type { SupabaseClient }
 
 // Export auth functions for easier access
 export const signUp = async (email: string, password: string, userData?: Record<string, any>) => {

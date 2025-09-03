@@ -116,6 +116,24 @@ function App() {
         default: return null;
       }
     };
+    
+    // Listen for tab change events from other components
+    const handleTabChange = (event: Event) => {
+      const tab = (event as CustomEvent).detail;
+      if (tab && typeof tab === 'string') {
+        console.log('Tab change event received:', tab);
+        setActiveTab(tab);
+        localStorage.setItem('activeTab', tab);
+        window.location.hash = `#/${tab.toLowerCase()}`;
+      }
+    };
+    
+    window.addEventListener('tabChange', handleTabChange as EventListener);
+    
+    // Cleanup
+    return () => {
+      window.removeEventListener('tabChange', handleTabChange as EventListener);
+    };
 
     const applyHash = () => {
       const t = hashToTab(window.location.hash);
