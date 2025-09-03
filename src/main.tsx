@@ -3,6 +3,8 @@ import { createRoot } from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
 import './index.css'
 import * as Sentry from '@sentry/react'
+import App from './App'
+import AppLoadingWrapper from './components/AppLoadingWrapper'
 
 const rootEl = document.getElementById('root')!
 const root = createRoot(rootEl)
@@ -58,11 +60,13 @@ async function bootstrap() {
   }
 
   try {
-    const App = (await import('./App.tsx')).default
+    const App = (await import('./App')).default
     root.render(
       <StrictMode>
         <BrowserRouter>
-          <App />
+          <AppLoadingWrapper>
+            <App />
+          </AppLoadingWrapper>
         </BrowserRouter>
       </StrictMode>
     )
