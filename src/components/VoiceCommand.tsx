@@ -163,7 +163,7 @@ const VoiceCommand: FC<VoiceCommandProps> = ({
       case 'idle':
         if (normalizedCommand.includes('book') || normalizedCommand.includes('schedule')) {
           setBookingStep('provider');
-          setResponse('Which doctor or provider would you like to book an appointment with?');
+          setResponse('Which provider would you like to book with?');
         }
         break;
         
@@ -172,19 +172,82 @@ const VoiceCommand: FC<VoiceCommandProps> = ({
         if (extractedProvider) {
           setAppointmentDetails(prev => ({ ...prev, provider: extractedProvider }));
           setBookingStep('datetime');
-          setResponse(`Got it, ${extractedProvider}. On which date and time should I schedule this appointment?`);
+          setResponse(`Got it, ${extractedProvider}. What date and time should I schedule it for?`);
         } else {
           setResponse('I didn\'t catch the provider name. Please try again.');
         }
         break;
       }
       
-      // Add other booking steps here
+      case 'datetime': {
+        if (command) {
+          setAppointmentDetails(prev => ({ ...prev, date: command, time: '' })); // Assuming combined date/time for now
+          setBookingStep('location');
+          setResponse('Would you like this to be an online or offline appointment?');
+        } else {
+          setResponse('I didn\'t catch that. What date and time?');
+        }
+        break;
+      }
+
+      case 'location': {
+        const location = normalizedCommand.includes('online') ? 'online' : (normalizedCommand.includes('offline') ? 'offline' : '');
+        if (location) {
+          setAppointmentDetails(prev => ({ ...prev, location }));
+          setBookingStep('confirm');
+          const { provider, date } = appointmentDetails;
+          setResponse(`Great! I’ve scheduled your appointment with ${provider} on ${date} (${location}). Is that correct?`);
+        } else {
+          setResponse('Online or offline?');
+        }
+        break;
+      }
+
+      case 'confirm': {
+        if (normalizedCommand.includes('yes')) {
+          setIsProcessing(true);
+          try {
+            const { provider, date, location } = appointmentDetails;
+            const newAppointment = {
+              user_id: _user!.id,
+              title: `Appointment with ${provider}`,
+              start_time: new Date(date), // This might need a robust date parser
+              end_time: new Date(new Date(date).getTime() + 30 * 60000),
+              provider,
+              is_online: location === 'online',
+            };
+            
+            const bookedAppointment = await createAppointment(newAppointment as any);
+            
+            if (onAppointmentBooked) {
+              onAppointmentBooked(bookedAppointment);
+            }
+            
+            setResponse(`Great! I’ve scheduled your appointment with ${provider} on ${date} (${location}).`);
+            toast.success('Appointment booked successfully!');
+            
+            // Reset state
+            setBookingStep('idle');
+            setAppointmentDetails({ provider: '', date: '', time: '', location: '', meetingLink: '' });
+
+          } catch (error) {
+            console.error(error);
+            setResponse('Sorry, something went wrong.');
+            setError('Could not book appointment.');
+          } finally {
+            setIsProcessing(false);
+          }
+        } else {
+          setBookingStep('idle');
+          setResponse('Okay, starting over. Say "Book an appointment" to begin.');
+        }
+        break;
+      }
       
       default:
         setResponse('I\'m not sure how to handle that. Please try again.');
     }
-  }, [bookingStep, appointmentDetails]);
+  }, [bookingStep, appointmentDetails, _user, onAppointmentBooked]);
 
   // Initialize on mount
   useEffect(() => {
