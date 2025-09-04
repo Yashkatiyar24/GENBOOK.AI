@@ -84,3 +84,78 @@ export const getCurrentUser = async (): Promise<User | null> => {
   const { data: { user } } = await supabase.auth.getUser()
   return user
 }
+
+// Appointment related functions
+export interface Appointment {
+  id?: string;
+  title: string;
+  description?: string;
+  start_time: string;
+  end_time: string;
+  status?: 'scheduled' | 'confirmed' | 'completed' | 'cancelled' | 'rescheduled' | 'no-show';
+  priority?: 'low' | 'medium' | 'high' | 'urgent';
+  location?: string;
+  meeting_link?: string;
+  provider?: string;
+  notes?: string;
+  user_id?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export const createAppointment = async (appointment: Omit<Appointment, 'id' | 'created_at' | 'updated_at'>) => {
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      throw new Error('User not authenticated');
+    }
+
+    const { data, error } = await supabase
+      .from('appointments')
+      .insert([
+        {
+          ...appointment,
+          user_id: user.id,
+          status: appointment.status || 'scheduled',
+          priority: appointment.priority || 'medium'
+        }
+      ])
+      .select()
+      .single();
+
+    if (error) throw error;
+    return { data, error: null };
+  } catch (error) {
+    console.error('Error creating appointment:', error);
+    return { data: null, error };
+  }
+};
+
+export const getAppointments = async (filters: Partial<Appointment> = {}) => {
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      throw new Error('User not authenticated');
+    }
+
+    let query = supabase
+      .from('appointments')
+      .select('*')
+      .eq('user_id', user.id);
+
+    // Apply filters if provided
+    Object.entries(filters).forEach(([key, value]) => {
+      if (value !== undefined) {
+        query = query.eq(key, value);
+      }
+    });
+
+    const { data, error } = await query.order('start_time', { ascending: true });
+    
+    if (error) throw error;
+    return { data, error: null };
+  } catch (error) {
+    console.error('Error fetching appointments:', error);
+    return { data: null, error };
+  }
+};
