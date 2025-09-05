@@ -58,17 +58,19 @@ const PLAN_CONFIG = {
   }
 };
 
-// Enhanced signature verification function
+// Enhanced signature verification function (checkout payment)
+// NOTE: Verify the checkout payment signature using RAZORPAY_KEY_SECRET
+// Webhook payloads should be verified with RAZORPAY_WEBHOOK_SECRET separately
 function verifyPaymentSignature(orderId: string, paymentId: string, signature: string): boolean {
   try {
-    const webhookSecret = process.env.RAZORPAY_WEBHOOK_SECRET || '';
-    if (!webhookSecret) {
-      console.error('Razorpay webhook secret not configured');
+    const keySecret = process.env.RAZORPAY_KEY_SECRET || '';
+    if (!keySecret) {
+      console.error('Razorpay key secret not configured');
       return false;
     }
 
     const expectedSignature = crypto
-      .createHmac('sha256', webhookSecret)
+      .createHmac('sha256', keySecret)
       .update(`${orderId}|${paymentId}`)
       .digest('hex');
 
