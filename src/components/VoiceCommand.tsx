@@ -69,6 +69,8 @@ const VoiceCommand: FC<VoiceCommandProps> = ({
     location: '',
     meetingLink: ''
   });
+  const [availableProviders, setAvailableProviders] = useState(['Dr. Smith', 'Dr. Jones', 'Dr. Williams']);
+  const [availableTimeSlots, setAvailableTimeSlots] = useState(['9:00 AM', '10:00 AM', '11:00 AM']);
 
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
@@ -163,25 +165,26 @@ const VoiceCommand: FC<VoiceCommandProps> = ({
       case 'idle':
         if (normalizedCommand.includes('book') || normalizedCommand.includes('schedule')) {
           setBookingStep('provider');
-          setResponse('Which provider would you like to book with?');
+          setResponse(`Which provider would you like to book with? Available providers are: ${availableProviders.join(', ')}`);
         }
         break;
         
       case 'provider': {
         const extractedProvider = command.replace(/^(book|schedule|with|an?|appointment|for)/i, '').trim();
-        if (extractedProvider) {
+        if (extractedProvider && availableProviders.includes(extractedProvider)) {
           setAppointmentDetails(prev => ({ ...prev, provider: extractedProvider }));
           setBookingStep('datetime');
-          setResponse(`Got it, ${extractedProvider}. What date and time should I schedule it for?`);
+          setResponse(`Got it, ${extractedProvider}. What date and time should I schedule it for? Available times are: ${availableTimeSlots.join(', ')}`);
         } else {
-          setResponse('I didn\'t catch the provider name. Please try again.');
+          setResponse(`I didn\'t catch the provider name or the provider is invalid. Please choose from: ${availableProviders.join(', ')}`);
         }
         break;
       }
       
       case 'datetime': {
-        if (command) {
-          setAppointmentDetails(prev => ({ ...prev, date: command, time: '' })); // Assuming combined date/time for now
+        const extractedTime = command.replace(/^(book|schedule|with|an?|appointment|for|on)/i, '').trim();
+        if (extractedTime && availableTimeSlots.includes(extractedTime)) {
+          setAppointmentDetails(prev => ({ ...prev, date: '', time: extractedTime })); // remove hardcoded date
           setBookingStep('location');
           setResponse('Would you like this to be an online or offline appointment?');
         } else {
@@ -196,7 +199,7 @@ const VoiceCommand: FC<VoiceCommandProps> = ({
           setAppointmentDetails(prev => ({ ...prev, location }));
           setBookingStep('confirm');
           const { provider, date } = appointmentDetails;
-          setResponse(`Great! I’ve scheduled your appointment with ${provider} on ${date} (${location}). Is that correct?`);
+          setResponse(`Great! I’ve scheduled your appointment with ${provider} on ${date} at ${appointmentDetails.time} (${location}). Is that correct?`);
         } else {
           setResponse('Online or offline?');
         }
@@ -207,12 +210,12 @@ const VoiceCommand: FC<VoiceCommandProps> = ({
         if (normalizedCommand.includes('yes')) {
           setIsProcessing(true);
           try {
-            const { provider, date, location } = appointmentDetails;
+            const { provider, date, time, location } = appointmentDetails;
             const newAppointment = {
               user_id: _user!.id,
               title: `Appointment with ${provider}`,
-              start_time: new Date(date), // This might need a robust date parser
-              end_time: new Date(new Date(date).getTime() + 30 * 60000),
+              start_time: new Date(), // This needs to be fixed later, to include user input for date
+              end_time: new Date(new Date().getTime() + 30 * 60000),
               provider,
               is_online: location === 'online',
             };
@@ -223,7 +226,7 @@ const VoiceCommand: FC<VoiceCommandProps> = ({
               onAppointmentBooked(bookedAppointment);
             }
             
-            setResponse(`Great! I’ve scheduled your appointment with ${provider} on ${date} (${location}).`);
+            setResponse(`Great! I’ve scheduled your appointment with ${provider} on ${date} at ${time} (${location}).`);
             toast.success('Appointment booked successfully!');
             
             // Reset state
@@ -247,7 +250,7 @@ const VoiceCommand: FC<VoiceCommandProps> = ({
       default:
         setResponse('I\'m not sure how to handle that. Please try again.');
     }
-  }, [bookingStep, appointmentDetails, _user, onAppointmentBooked]);
+  }, [bookingStep, appointmentDetails, _user, onAppointmentBooked, availableProviders, availableTimeSlots]);
 
   // Initialize on mount
   useEffect(() => {

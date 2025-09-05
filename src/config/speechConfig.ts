@@ -2,21 +2,21 @@
 export const SPEECH_CONFIG = {
   // Add your Web Speech API key here
   API_KEY: import.meta.env.VITE_SPEECH_API_KEY || '',
-  
+
   // API endpoint (if using a custom service)
   API_ENDPOINT: import.meta.env.VITE_SPEECH_API_ENDPOINT || '',
-  
+
   // Language settings
   LANGUAGE: 'en-US',
-  
+
   // Recognition settings
   CONTINUOUS: false,
   INTERIM_RESULTS: true,
   MAX_ALTERNATIVES: 1,
-  
+
   // Timeout settings
   TIMEOUT_MS: 10000,
-  
+
   // Service type
   SERVICE_TYPE: import.meta.env.VITE_SPEECH_SERVICE_TYPE || 'native', // 'native', 'google', 'azure', 'aws'
 };
@@ -49,6 +49,12 @@ export const getSpeechServiceConfig = () => {
         type: 'aws',
         apiKey: SPEECH_CONFIG.API_KEY,
         endpoint: SPEECH_CONFIG.API_ENDPOINT,
+      };
+    case 'assemblyai':
+      return {
+        type: 'assemblyai',
+        apiKey: SPEECH_CONFIG.API_KEY,
+        endpoint: 'https://api.assemblyai.com/v2',
       };
     default:
       return {
