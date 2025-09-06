@@ -2,7 +2,6 @@
 // Generated at 2025-09-06T11:22:42.082Z
 
 import { Stagehand } from "@browserbasehq/stagehand";
-import { z } from 'zod';
 import StagehandConfig from "./stagehand.config.js";
 
 // Stagehand configuration
@@ -43,9 +42,7 @@ async function runWorkflow() {
 
     // Step 3: Perform action
     console.log(`Performing action: click the Settings button`);
-    await page.act({
-      description: `click the Settings button`,
-    });
+  await page.act('click Settings button');
 
     // Step 4: Navigate to URL
     console.log('Navigating to: https://genbookai.tech/');
@@ -55,45 +52,33 @@ async function runWorkflow() {
     console.log(
       `Performing action: type ${variables.input_751247_1} into the email input field`,
     );
-    await page.act({
-      description: `type ${variables.input_751247_1} into the email input field`,
-    });
+  await page.act(`type ${variables.input_751247_1} into the email input field`);
 
     // Step 6: Perform action
     console.log(
       `Performing action: type ${variables.input_751247_2} into the password input field`,
     );
-    await page.act({
-      description: `type ${variables.input_751247_2} into the password input field`,
-    });
+  await page.act(`type ${variables.input_751247_2} into the password input field`);
 
     // Step 7: Perform action
     console.log(`Performing action: click the Sign In button`);
-    await page.act({
-      description: `click the Sign In button`,
-    });
+  await page.act('click the Sign In button');
 
     // Step 8: Perform action
     console.log(
       `Performing action: type ${variables.input_751247_4} into the email input field`,
     );
-    await page.act({
-      description: `type ${variables.input_751247_4} into the email input field`,
-    });
+  await page.act(`type ${variables.input_751247_4} into the email input field`);
 
     // Step 9: Perform action
     console.log(
       `Performing action: type ${variables.input_751247_5} into the password input field`,
     );
-    await page.act({
-      description: `type ${variables.input_751247_5} into the password input field`,
-    });
+  await page.act(`type ${variables.input_751247_5} into the password input field`);
 
     // Step 10: Perform action
     console.log(`Performing action: click the Sign In button`);
-    await page.act({
-      description: `click the Sign In button`,
-    });
+  await page.act('click the Sign In button');
 
     // Step 11: Perform action
     console.log(`Performing action: click the Voice Commands button`);
@@ -106,15 +91,11 @@ async function runWorkflow() {
     console.log(
       `Performing action: click the close button on the Voice Assistant dialog`,
     );
-    await page.act({
-      description: `click the close button on the Voice Assistant dialog`,
-    });
+  await page.act('click the close button on the Voice Assistant dialog');
 
     // Step 13: Perform action
     console.log(`Performing action: click the Settings button in the sidebar`);
-    await page.act({
-      description: `click the Settings button in the sidebar`,
-    });
+  await page.act('click the Settings button in the sidebar');
 
     // Step 14: Perform action
     console.log(

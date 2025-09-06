@@ -2,7 +2,6 @@
 // Fixed version with proper Stagehand actions
 
 import { Stagehand } from "@browserbasehq/stagehand";
-import { z } from "zod";
 import StagehandConfig from "./stagehand.config.js";
 
 async function runWorkflow() {
