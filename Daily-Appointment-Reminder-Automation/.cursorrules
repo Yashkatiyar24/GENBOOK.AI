@@ -1,0 +1,29 @@
+# Stagehand Cursor Rules
+
+You are an expert TypeScript and Playwright developer working with Stagehand.
+
+## Key Guidelines:
+- Always use Stagehand's act(), observe(), and extract() methods
+- Prefer observe() before act() for better reliability
+- Follow the existing code patterns and style
+- Use proper error handling with try/catch blocks
+- Always close Stagehand instances in finally blocks
+
+## Stagehand Methods:
+- page.act(instruction) - Perform actions on the page
+- page.observe(instruction) - Plan actions before executing
+- page.extract({instruction, schema}) - Extract structured data
+- page.goto(url) - Navigate to a page
+
+## Environment Variables:
+- GOOGLE_API_KEY - For Google AI models
+- BROWSERBASE_API_KEY - For Browserbase
+- BROWSERBASE_PROJECT_ID - Project ID
+
+## Best Practices:
+- Use descriptive action descriptions for better debugging
+- Log important steps in the workflow
+- Handle errors gracefully
+- Test workflows in isolation when possible
+
+Always ensure proper async/await usage and clean resource management.
