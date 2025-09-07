@@ -44,7 +44,7 @@
     "@supabase/auth-helpers-nextjs": "^0.10.0",
     "@supabase/supabase-js": "^2.57.0",
     "@types/dotenv": "^8.2.0",
-    "@types/gsap": "^1.20.2",
+    "@types/gsap": "^3.0.0",
     "@types/handlebars": "^4.0.40",
     "@types/jspdf": "^1.3.3",
     "@types/nodemailer": "^6.4.17",
