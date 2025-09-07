@@ -15,6 +15,7 @@ import morgan from 'morgan';
 import rateLimit from 'express-rate-limit';
 import { createServer } from 'http';
 import logger from './utils/logger.js';
+import { getEnv, redactEnv } from './utils/env.js';
 import { registerMetrics, metricsEndpoint, observeRequestDuration } from './utils/metrics.js';
 import swaggerUi from 'swagger-ui-express';
 import swaggerSpec from './swagger.js';
@@ -35,32 +36,56 @@ interface ErrorWithStatus extends Error {
 }
 
 const app = express();
+const env = getEnv();
 // O
 // const PORT = 3001;
 
 // New
-const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 54321;
-const HOST = process.env.HOST || 'localhost';
+const PORT = parseInt(env.PORT, 10);
+const HOST = env.HOST;
 
 
 
 // Middleware
-// CORS allowlist from env
-const allowedOrigins = [
+// CORS allowlist from env (comma separated) plus defaults
+const allowedOrigins = (
+  env.ALLOWED_ORIGINS?.split(',').map(o => o.trim()).filter(Boolean) || []
+).concat([
   'http://localhost:5173',
-  'http://localhost:3000',
-  'http://localhost:5174',
-  'http://localhost:5175',
-  'https://www.genbookai.tech',
-  'https://genbook-ai-git-main-yashkatiyar2405-gmailcoms-projects.vercel.app',
-  'https://genbook-bmepw9j5b-yashkatiyar2405-gmailcoms-projects.vercel.app'
-];
+  'http://localhost:3000'
+]);
 app.use(cors({
   origin: allowedOrigins,
   credentials: true
 }));
 // Security headers
-app.use(helmet());
+app.use(helmet({
+  crossOriginEmbedderPolicy: false, // allow for certain third-party embeds if needed
+  contentSecurityPolicy: {
+    useDefaults: true,
+    directives: {
+      "default-src": ["'self'"],
+      "script-src": ["'self'", "'unsafe-inline'"],
+      "style-src": ["'self'", "'unsafe-inline'"],
+      "img-src": ["'self'", 'data:', 'blob:'],
+      "connect-src": ["'self'", ...allowedOrigins, env.SUPABASE_URL],
+      "frame-ancestors": ["'none'"],
+      "object-src": ["'none'"]
+    }
+  }
+}));
+// Global rate limiter (general API safety net)
+const globalLimiter = rateLimit({
+  windowMs: 5 * 60 * 1000,
+  max: 300,
+  standardHeaders: true,
+  legacyHeaders: false
+});
+app.use(globalLimiter);
+
+// Log sanitized env on startup (once)
+logger.info('Environment loaded', redactEnv(env));
+
 
 // Request ID + HTTP logging
 app.use((req, _res, next) => {
@@ -110,8 +135,21 @@ if (process.env.SENTRY_DSN) {
 }
 
 // Health check endpoint
-app.get('/health', (req, res) => {
-  res.status(200).json({ status: 'ok' });
+app.get('/health', (_req, res) => {
+  res.status(200).json({ status: 'ok', uptime: process.uptime() });
+});
+
+// Simple readiness probe that validates basic DB access
+app.get('/ready', async (_req, res) => {
+  const start = Date.now();
+  try {
+    // Lightweight metadata call: fetch 1 row from a small table if exists
+    const { error } = await supabase.from('user_profiles').select('id').limit(1);
+    if (error) throw error;
+    return res.status(200).json({ status: 'ready', latency_ms: Date.now() - start });
+  } catch (err: any) {
+    return res.status(503).json({ status: 'degraded', error: err.message, latency_ms: Date.now() - start });
+  }
 });
 // Prometheus metrics endpoint
 registerMetrics();
@@ -225,7 +263,8 @@ async function startServer() {
       await initializeDatabase();
       console.log('Database initialized successfully');
     } catch (dbError) {
-      console.warn('Database initialization failed, continuing without it:', dbError.message);
+      const msg = dbError instanceof Error ? dbError.message : String(dbError);
+      console.warn('Database initialization failed, continuing without it:', msg);
     }
     
     // Try to setup RLS, but don't fail if it doesn't work
@@ -233,14 +272,16 @@ async function startServer() {
       await setupRLS();
       console.log('RLS setup completed');
     } catch (rlsError) {
-      console.warn('RLS setup failed, continuing without it:', rlsError.message);
+      const msg = rlsError instanceof Error ? rlsError.message : String(rlsError);
+      console.warn('RLS setup failed, continuing without it:', msg);
     }
 
     const server = createServer(app);
 
     server.listen(PORT, HOST, () => {
       console.log(`🚀 Server running on ${HOST}:${PORT}`);
-      console.log(`📊 Health check: http://${HOST}:${PORT}/health`);
+      console.log(`📊 Liveness: http://${HOST}:${PORT}/health`);
+      console.log(`🟢 Readiness: http://${HOST}:${PORT}/ready`);
       // Start background processors
       startNotificationProcessor();
     });
@@ -257,3 +298,12 @@ if (process.env.NODE_ENV !== 'test') {
 }
 console.log(process.env.NODE_ENV);
 export default app;
+
+// Global process-level safeguards
+process.on('unhandledRejection', (reason) => {
+  logger.error('UnhandledRejection', { reason });
+});
+process.on('uncaughtException', (err) => {
+  logger.error('UncaughtException', { error: err.message, stack: err.stack });
+  if (env.NODE_ENV === 'production') process.exit(1);
+});

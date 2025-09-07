@@ -1,6 +1,17 @@
 export default {
   testEnvironment: 'jsdom',
   setupFilesAfterEnv: ['<rootDir>/src/setupTests.js'],
+  collectCoverage: true,
+  coverageDirectory: 'coverage/frontend',
+  coverageReporters: ['text', 'lcov', 'json-summary'],
+  coverageThreshold: {
+    global: {
+      lines: 70,
+      statements: 70,
+      branches: 55,
+      functions: 65
+    }
+  },
   transform: {
     '^.+\\.(ts|tsx)$': [
       'ts-jest',

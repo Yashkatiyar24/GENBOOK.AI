@@ -1,0 +1,160 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, develop, feature/** ]
+  pull_request:
+    branches: [ main, develop ]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-test:
+    name: Lint • Type Check • Test • Build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [18, 20]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Enable corepack (pnpm/yarn future proofing)
+        run: corepack enable
+
+      - name: Use Node ${{ matrix.node }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Cache build outputs
+        uses: actions/cache@v4
+        with:
+          path: |
+            node_modules/.cache
+            .vite
+            coverage
+          key: build-${{ runner.os }}-${{ matrix.node }}-${{ hashFiles('package-lock.json') }}
+          restore-keys: |
+            build-${{ runner.os }}-${{ matrix.node }}-
+
+      - name: Generate root .env (placeholder)
+        run: |
+          cat > .env <<'EOF'
+          VITE_SUPABASE_URL=https://example.supabase.co
+          VITE_SUPABASE_ANON_KEY=anon_key_placeholder
+          VITE_STRIPE_PUBLISHABLE_KEY=pk_test_placeholder
+          VITE_APP_NAME=GENBOOK.AI
+          VITE_APP_VERSION=CI
+          EOF
+
+      - name: Generate server/.env (placeholder)
+        run: |
+          cat > server/.env <<'EOF'
+          SUPABASE_URL=https://example.supabase.co
+          SUPABASE_SERVICE_KEY=service_role_key_placeholder_min_length________________
+          PORT=3001
+          NODE_ENV=test
+          ALLOWED_ORIGINS=http://localhost:5173
+          RAZORPAY_KEY_ID=rzp_test_placeholder
+          RAZORPAY_KEY_SECRET=rzp_secret_placeholder
+          RAZORPAY_WEBHOOK_SECRET=wh_placeholder
+          EOF
+
+      - name: Lint
+        run: npm run lint --silent
+
+      - name: Type check
+        run: npm run type-check --silent
+
+      - name: Run tests (coverage)
+  run: npm run test:ci
+        env:
+          CI: 'true'
+
+      - name: Upload coverage artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-${{ matrix.node }}
+          path: coverage
+          if-no-files-found: ignore
+
+      - name: Build (client)
+        run: npm run build
+
+      - name: Build (server)
+        run: npm run build:server
+
+      - name: Upload dist artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist-bundles-${{ matrix.node }}
+          path: |
+            dist
+            dist-server
+          if-no-files-found: warn
+
+      - name: Upload combined coverage (frontend + server)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-raw-${{ matrix.node }}
+          path: coverage
+          if-no-files-found: ignore
+
+      - name: Codecov upload
+        if: matrix.node == 20
+        uses: codecov/codecov-action@v4
+        with:
+          fail_ci_if_error: true
+          flags: unit
+          verbose: true
+
+      - name: Security audit (high severity)
+        run: |
+          npm audit --omit=dev --audit-level=high || echo 'Ignoring non-blocking audit issues'
+
+  summary:
+    name: Summarize
+    runs-on: ubuntu-latest
+    needs: build-test
+    if: always()
+    steps:
+      - name: Job Result
+        run: |
+          echo "Build/Test matrix conclusion: ${{ needs.build-test.result }}"
+          if [ "${{ needs.build-test.result }}" != "success" ]; then
+            echo "Some matrix runs failed."; exit 1; fi
+
+  # Placeholder for future end-to-end tests (Playwright or Cypress)
+  # e2e:
+  #   name: E2E Tests
+  #   runs-on: ubuntu-latest
+  #   needs: build-test
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - uses: actions/setup-node@v4
+  #       with:
+  #         node-version: 20
+  #     - run: npm ci
+  #     - run: npm run build && npm run build:server
+  #     - name: Install Playwright
+  #       run: npx playwright install --with-deps
+  #     - name: Start app (background)
+  #       run: |
+  #         npm run start:server &
+  #         npx serve dist -l 5173 &
+  #         sleep 5
+  #     - name: Run e2e
+  #       run: npm run test:e2e

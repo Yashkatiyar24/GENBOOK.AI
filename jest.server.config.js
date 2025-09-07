@@ -3,6 +3,17 @@ export default {
   preset: "ts-jest",
   testEnvironment: "node",
   roots: ["<rootDir>/server"],
+  collectCoverage: true,
+  coverageDirectory: 'coverage/server',
+  coverageReporters: ['text', 'lcov'],
+  coverageThreshold: {
+    global: {
+      lines: 65,
+      statements: 65,
+      branches: 50,
+      functions: 60
+    }
+  },
   testMatch: [
     "<rootDir>/server/**/__tests__/**/*.[tj]s?(x)",
     "<rootDir>/server/**/?(*.)+(spec|test).[tj]s?(x)"

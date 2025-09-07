@@ -13,12 +13,16 @@
     "start:server": "node dist-server/index.js",
     "analyze": "ANALYZE=1 vite build",
     "lint": "eslint .",
+    "type-check": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.server.json",
     "preview": "vite preview --host 0.0.0.0 --port $PORT",
     "email:dev": "node server/emailServer.mjs",
     "test": "jest",
     "test:frontend": "jest -c jest.config.js",
     "test:server": "jest -c jest.server.config.js",
     "test:watch": "jest --watch",
+    "test:ci": "jest --coverage --runInBand",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
     "start": "node dist-server/index.js"
   },
   "dependencies": {
@@ -87,6 +91,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.9.1",
+    "@playwright/test": "^1.55.0",
     "@testing-library/jest-dom": "^6.6.4",
     "@testing-library/react": "^16.3.0",
     "@testing-library/user-event": "^14.6.1",
