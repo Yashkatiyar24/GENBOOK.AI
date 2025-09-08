@@ -23,6 +23,8 @@
     "test:ci": "jest --coverage --runInBand",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
+    "test:ci:full": "npm run test:frontend -- --coverage && npm run test:server -- --coverage && npm run coverage:merge",
+    "coverage:merge": "node scripts/merge-coverage.js",
     "start": "node dist-server/index.js"
   },
   "dependencies": {
@@ -90,6 +92,7 @@
     "zod": "^4.0.17"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.10.2",
     "@eslint/js": "^9.9.1",
     "@playwright/test": "^1.55.0",
     "@testing-library/jest-dom": "^6.6.4",
