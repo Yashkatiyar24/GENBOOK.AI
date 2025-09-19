@@ -1,531 +1,259 @@
+# 🏥 GENBOOK.AI
+
 <div align="center">
-  <h1>🏥 GENBOOK.AI</h1>
+  <h1>GENBOOK.AI</h1>
   <p><strong>Intelligent Healthcare Appointment Management System</strong></p>
   
   <p>
-    <img src="https://img.shields.io/badge/React-18.2.0-blue?style=for-the-badge&logo=react" alt="React">
-    <img src="https://img.shields.io/badge/TypeScript-5.0-blue?style=for-the-badge&logo=typescript" alt="TypeScript">
-    <img src="https://img.shields.io/badge/Supabase-Backend-green?style=for-the-badge&logo=supabase" alt="Supabase">
-    <img src="https://img.shields.io/badge/Vite-Build-purple?style=for-the-badge&logo=vite" alt="Vite">
+    <img src="https://img.shields.io/badge/React-18.2.0-61DAFB?style=flat&logo=react" alt="React">
+    <img src="https://img.shields.io/badge/TypeScript-5.0-3178C6?style=flat&logo=typescript" alt="TypeScript">
+    <img src="https://img.shields.io/badge/Supabase-3ECF8E?style=flat&logo=supabase" alt="Supabase">
+    <img src="https://img.shields.io/badge/Vite-646CFF?style=flat&logo=vite" alt="Vite">
+    <img src="https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=flat&logo=tailwind-css" alt="Tailwind CSS">
   </p>
 
   <p>
-    <img src="https://img.shields.io/badge/Status-Active-success?style=flat-square" alt="Status">
-    <img src="https://img.shields.io/badge/License-MIT-blue?style=flat-square" alt="License">
-    <img src="https://img.shields.io/badge/Version-1.0.0-orange?style=flat-square" alt="Version">
+    <img src="https://img.shields.io/badge/Status-Production-10B981?style=flat" alt="Status">
+    <img src="https://img.shields.io/badge/License-MIT-2563EB?style=flat" alt="License">
+    <img src="https://img.shields.io/badge/Version-1.0.0-F59E0B?style=flat" alt="Version">
   </p>
 </div>
 
----
-
 ## 📋 Table of Contents
 
-- [🎯 Overview](#-overview)
-- [✨ Features](#-features)
-- [🛠️ Tech Stack](#️-tech-stack)
-- [🚀 Quick Start](#-quick-start)
-- [📦 Installation](#-installation)
-- [⚙️ Configuration](#️-configuration)
-- [🗄️ Database Setup](#️-database-setup)
-- [🎨 UI Components](#-ui-components)
-- [🔐 Authentication](#-authentication)
-- [📱 Screenshots](#-screenshots)
-- [🤝 Contributing](#-contributing)
-- [📄 License](#-license)
+- [Overview](#-overview)
+- [Key Features](#-key-features)
+- [Tech Stack](#-tech-stack)
+- [Getting Started](#-getting-started)
+  - [Prerequisites](#prerequisites)
+  - [Installation](#installation)
+  - [Configuration](#-configuration)
+- [Development](#-development)
+- [Deployment](#-deployment)
+- [API Documentation](#-api-documentation)
+- [Testing](#-testing)
+- [Contributing](#-contributing)
+- [Security](#-security)
+- [License](#-license)
+- [Acknowledgements](#-acknowledgements)
 
----
+## 🌟 Overview
 
-## 🎯 Overview
+GENBOOK.AI is a comprehensive healthcare appointment management solution designed to streamline the scheduling process for medical practices and patients. Built with modern web technologies, it offers a secure, scalable, and user-friendly platform for managing appointments, patient records, and healthcare provider schedules.
 
-**GENBOOK.AI** is a modern, intelligent healthcare appointment management system built with React and TypeScript. It provides a seamless experience for patients to book appointments, manage their profiles, and interact with healthcare providers through an intuitive web interface.
+## ✨ Key Features
 
-### 🌟 Key Highlights
-
-- **🎨 Modern UI/UX**: Clean, responsive design with dark theme
-- **🔒 Secure Authentication**: Powered by Supabase Auth
-- **📱 Mobile-First**: Responsive design that works on all devices
-- **⚡ Real-time Updates**: Live data synchronization
-- **🛡️ Row-Level Security**: Database-level security policies
-- **🎯 TypeScript**: Full type safety throughout the application
-
----
-
-## ✨ Features
-
-### 👤 User Management
-- **🔐 Secure Authentication** - Sign up, sign in, and password recovery
-- **👤 Profile Management** - Complete user profile with medical information
-- **👨‍👩‍👧‍👦 Family Management** - Add and manage family members
-- **🔔 Notification Settings** - Customizable email, SMS, and push notifications
+### 👥 User Management
+- **Secure Authentication** - JWT-based authentication with Supabase Auth
+- **Role-Based Access Control** - Different permissions for patients, doctors, and admins
+- **Profile Management** - Complete user profiles with medical history
+- **Family Accounts** - Manage appointments for family members
 
 ### 📅 Appointment System
-- **📋 Appointment Booking** - Easy-to-use appointment scheduling
-- **📊 Dashboard** - Overview of upcoming and past appointments
-- **📱 Contact Management** - Store and manage healthcare provider contacts
-- **🕒 History Tracking** - Complete appointment history
+- **Online Booking** - 24/7 appointment scheduling
+- **Calendar Integration** - Sync with popular calendar services
+- **Automated Reminders** - Email and SMS notifications
+- **Waitlist Management** - Automatic scheduling for cancellations
 
-### 🎨 User Experience
-- **🌙 Dark Theme** - Modern dark UI with cyan accents
-- **📱 Responsive Design** - Works perfectly on desktop, tablet, and mobile
-- **⚡ Fast Loading** - Optimized performance with Vite
-- **🎯 Intuitive Navigation** - Easy-to-use sidebar navigation
+### 🏥 Healthcare Features
+- **Electronic Health Records** - Secure patient records
+- **Telehealth** - Built-in video consultations
+- **Prescription Management** - Digital prescriptions
+- **Billing & Insurance** - Integrated payment processing
 
----
+### 🛠️ Admin Dashboard
+- **Analytics** - Practice performance metrics
+- **Staff Management** - Schedule and permissions
+- **Reporting** - Custom reports and exports
+- **Settings** - Customize practice preferences
 
-## 🛠️ Tech Stack
+## 🛠 Tech Stack
 
 ### Frontend
-- **⚛️ React 18.2** - Modern React with hooks
-- **📘 TypeScript 5.0** - Type-safe development
-- **⚡ Vite** - Lightning-fast build tool
-- **🎨 Tailwind CSS** - Utility-first CSS framework
-- **🎭 Lucide React** - Beautiful SVG icons
+- **Framework**: React 18.2
+- **Language**: TypeScript 5.0
+- **Build Tool**: Vite 4.0
+- **Styling**: Tailwind CSS 3.3
+- **State Management**: React Query
+- **Form Handling**: React Hook Form
+- **UI Components**: Headless UI
 
-### Backend & Database
-- **🟢 Supabase** - Backend-as-a-Service
-- **🐘 PostgreSQL** - Robust relational database
-- **🔐 Supabase Auth** - Authentication and user management
-- **🛡️ Row Level Security** - Database-level security
+### Backend
+- **Platform**: Supabase
+- **Database**: PostgreSQL 15
+- **Authentication**: Supabase Auth
+- **Storage**: Supabase Storage
+- **Realtime**: Supabase Realtime
 
-### Development Tools
-- **📦 npm** - Package management
-- **🔧 ESLint** - Code linting
-- **🎯 TypeScript** - Static type checking
+### DevOps
+- **Version Control**: Git
+- **CI/CD**: GitHub Actions
+- **Containerization**: Docker
+- **Monitoring**: Sentry
+- **Logging**: Pino
 
----
-
-## 🚀 Quick Start
+## 🚀 Getting Started
 
 ### Prerequisites
 
-- **Node.js** (v16 or higher)
-- **npm** or **yarn**
-- **Supabase Account** ([Sign up here](https://supabase.com))
+- Node.js 18+
+- npm 9+ or yarn 1.22+
+- Supabase account
+- PostgreSQL 13+
 
-### ⚡ One-Minute Setup
+### Installation
 
-```bash
-# Clone the repository
-git clone https://github.com/yashkatiyar24/genbook-ai.git
-cd genbook-ai
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/yashkatiyar24/genbook-ai.git
+   cd genbook-ai
+   ```
 
-# Install dependencies
-npm install
+2. **Install dependencies**
+   ```bash
+   npm install
+   # or
+   yarn
+   ```
 
-# Copy environment variables
-cp .env.example .env
+3. **Set up environment variables**
+   ```bash
+   cp .env.example .env
+   ```
+   Update the `.env` file with your configuration.
 
-# Start development server
-npm run dev
-```
+4. **Start the development server**
+   ```bash
+   npm run dev
+   # or
+   yarn dev
+   ```
 
-🎉 **That's it!** Your app will be running at `http://localhost:5173`
-
----
-
-## 📦 Installation
-
-### Step 1: Clone the Repository
-
-```bash
-git clone https://github.com/yashkatiyar24/genbook-ai.git
-cd genbook-ai
-```
-
-### Step 2: Install Dependencies
-
-```bash
-npm install
-# or
-yarn install
-```
-
-### Step 3: Environment Setup
-
-```bash
-# Copy the example environment file
-cp .env.example .env
-```
-
----
+5. **Open your browser**
+   ```
+   http://localhost:5173
+   ```
 
 ## ⚙️ Configuration
 
 ### Environment Variables
 
-Set up environment variables for both the frontend and backend.
-
-1) Frontend `.env` in project root (used by Vite/React):
+Create a `.env` file in the root directory with the following variables:
 
 ```env
-# Supabase (Frontend)
-VITE_SUPABASE_URL=https://your-project-id.supabase.co
-VITE_SUPABASE_ANON_KEY=your-anon-key-here
+# Supabase Configuration
+VITE_SUPABASE_URL=your_supabase_url
+VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
 
-# Stripe (Frontend)
-VITE_STRIPE_PUBLISHABLE_KEY=pk_test_xxx
+# Stripe (for payments)
+VITE_STRIPE_PUBLISHABLE_KEY=your_stripe_publishable_key
 
-# App (Optional)
-VITE_APP_NAME=GENBOOK.AI
-VITE_APP_VERSION=1.0.0
+# App Configuration
+VITE_APP_NAME="GENBOOK.AI"
+VITE_APP_URL=http://localhost:5173
 ```
 
-2) Backend `server/.env` (copy from `server/.env.example`):
+## 🛠 Development
 
-```env
-# Supabase (Backend)
-SUPABASE_URL=https://your-project-id.supabase.co
-SUPABASE_SERVICE_KEY=your-service-role-key
+### Available Scripts
 
-# Stripe (Backend)
-STRIPE_SECRET_KEY=sk_test_xxx
-STRIPE_WEBHOOK_SECRET=whsec_xxx
+- `dev` - Start development server
+- `build` - Build for production
+- `preview` - Preview production build
+- `test` - Run tests
+- `lint` - Run ESLint
+- `type-check` - Check TypeScript types
+- `format` - Format code with Prettier
 
-# Server
-PORT=3001
-ALLOWED_ORIGINS=http://localhost:5173
-FRONTEND_URL=http://localhost:5173
+### Code Style
 
-# Optional observability
-SENTRY_DSN=
-```
+This project uses:
+- ESLint for code linting
+- Prettier for code formatting
+- TypeScript for type checking
 
-### 🔧 Getting Supabase Credentials
+## 🚀 Deployment
 
-1. **Create a Supabase Project**
-   - Go to [supabase.com](https://supabase.com)
-   - Click "New Project"
-   - Fill in project details
-   - Wait for setup completion (2-3 minutes)
-
-2. **Get Your Credentials**
-   - Navigate to **Settings** → **API**
-   - Copy the **Project URL**
-   - Copy the **Anon Public Key**
-
----
-
-## 🗄️ Database Setup
-
-### Automated Setup
-
-Run the provided SQL scripts in your Supabase SQL Editor:
-
-```sql
--- 1. First, run the main database setup
--- Copy and paste contents of: setup-new-database.sql
-
--- 2. Then, add the settings tables
--- Copy and paste contents of: settings-tables-fix.sql
-```
-
-### 📊 Database Schema
-
-#### Core Tables
-- **`appointments`** - Appointment bookings
-- **`contacts`** - Healthcare provider contacts
-- **`user_settings`** - User preferences and notifications
-- **`user_profiles`** - Detailed user profiles
-- **`family_members`** - Family member information
-
-#### 🛡️ Security Features
-- **Row Level Security (RLS)** enabled on all tables
-- **User-specific data access** policies
-- **Automatic timestamp** triggers
-- **Data validation** constraints
-
-## 🎨 UI Components
-
-### 🏠 Dashboard
-- **📊 Overview Cards** - Quick stats and metrics
-- **📅 Upcoming Appointments** - Next appointments at a glance
-- **🔔 Notifications** - Important alerts and reminders
-
-### 👤 Profile Management
-- **📝 Personal Information** - Name, contact details, address
-- **🏥 Medical Information** - Conditions, allergies, insurance
-- **👨‍👩‍👧‍👦 Family Members** - Manage family profiles
-- **⚙️ Settings** - Preferences and notifications
-
-### 📅 Appointment System
-- **📋 Booking Interface** - Intuitive appointment creation
-- **📊 Calendar View** - Visual appointment overview
-- **📱 Contact Directory** - Healthcare provider contacts
-- **📈 History** - Past appointment records
-
----
-
-## 🔐 Authentication
-
-### 🚀 Features
-- **✅ Email/Password Authentication**
-- **🔄 Password Recovery**
-- **👤 User Registration**
-- **🛡️ Session Management**
-- **🔒 Secure Token Handling**
-
-### 🔧 Implementation
-```typescript
-// Authentication is handled by Supabase
-import { supabase } from './supabase';
-
-// Sign in
-const { data, error } = await supabase.auth.signInWithPassword({
-  email: 'user@example.com',
-  password: 'password123'
-});
-
-// Sign up
-const { data, error } = await supabase.auth.signUp({
-  email: 'user@example.com',
-  password: 'password123'
-});
-```
-
----
-
-## 📱 Screenshots
-
-### 🏠 Dashboard
-```
-┌─────────────────────────────────────────────────────────┐
-│  🏥 GENBOOK.AI                                         │
-├─────────────────────────────────────────────────────────┤
-│  📊 Dashboard    📅 Schedule    📋 History    ⚙️ Settings │
-├─────────────────────────────────────────────────────────┤
-│                                                         │
-│  📈 Overview                    📅 Upcoming             │
-│  ┌─────────────┐               ┌─────────────┐         │
-│  │ 📊 Stats    │               │ Next Appt   │         │
-│  │ 3 Upcoming  │               │ Dr. Smith   │         │
-│  │ 12 Total    │               │ 2:00 PM     │         │
-│  └─────────────┘               └─────────────┘         │
-│                                                         │
-└─────────────────────────────────────────────────────────┘
-```
-
-### ⚙️ Settings Page
-```
-┌─────────────────────────────────────────────────────────┐
-│  Settings - Manage your account and preferences         │
-├─────────────────────────────────────────────────────────┤
-│  👤 Profile    🔔 Notifications    🔒 Privacy & Security │
-├─────────────────────────────────────────────────────────┤
-│                                                         │
-│  Personal Information                                   │
-│  ┌─────────────────┐  ┌─────────────────┐             │
-│  │ Full Name       │  │ Email           │             │
-│  │ [Yash Katiyar]  │  │ [user@email]    │             │
-│  └─────────────────┘  └─────────────────┘             │
-│                                                         │
-│  Medical Information                                    │
-│  ┌─────────────────────────────────────────────────────┐ │
-│  │ Medical Conditions: [Diabetes, Hypertension]       │ │
-│  │ Allergies: [Peanuts, Shellfish]                    │ │
-│  └─────────────────────────────────────────────────────┘ │
-│                                                         │
-│                              [💾 Save Profile]         │
-└─────────────────────────────────────────────────────────┘
-```
-
----
-
-## 🚀 Development
-
-### 🛠️ Available Scripts
+### Production Build
 
 ```bash
-# Start development server
-npm run dev
-
-# Build for production
 npm run build
-
-# Preview production build
-npm run preview
-
-# Run linting
-npm run lint
-
-# Run type checking
-npm run type-check
 ```
 
-### 📁 Project Structure
+### Deployment Options
 
-```
-genbook-ai/
-├── 📁 public/                 # Static assets
-├── 📁 src/
-│   ├── 📁 components/         # React components
-│   │   ├── AuthModal.tsx      # Authentication modal
-│   │   ├── SettingsView.tsx   # Settings management
-│   │   └── ...                # Other components
-│   ├── 📄 App.tsx             # Main application
-│   ├── 📄 main.tsx            # Application entry point
-│   ├── 📄 supabase.ts         # Supabase configuration
-│   └── 📄 index.css           # Global styles
-├── 📄 .env.example            # Environment variables template
-├── 📄 package.json            # Dependencies and scripts
-├── 📄 README.md               # This file
-├── 📄 setup-new-database.sql  # Database setup script
-├── 📄 settings-tables-fix.sql # Additional tables script
-└── 📄 vite.config.ts          # Vite configuration
-```
+1. **Vercel** (Recommended)
+   - Connect your GitHub repository
+   - Set up environment variables
+   - Deploy with zero configuration
 
----
-
-## 💳 SaaS Billing & Subscription Enforcement
-
-### What's included
-- **Razorpay Subscription** integration
-  - Backend endpoints in `server/routes/billing.ts`:
-    - `GET /api/billing/subscription` - Get current subscription status
-    - `POST /api/billing/create-subscription` - Create a new subscription
-    - `POST /api/billing/cancel-subscription` - Cancel current subscription
-    - `POST /api/billing/webhook` - Razorpay webhook handler
-- **Subscription enforcement middleware** in `server/middleware/subscription.middleware.ts`
-  - Applied to protected routes
-  - Returns HTTP `402 Payment Required` when subscription is inactive
-
-### Plans & gating
-- Supported plans: `basic`, `professional`, `enterprise`
-- Plan features are enforced through the subscription middleware
-
-### Setup steps
-1. Configure Razorpay keys in `.env`:
+2. **Docker**
+   ```bash
+   docker build -t genbook-ai .
+   docker run -p 3000:3000 genbook-ai
    ```
-   RAZORPAY_KEY_ID=your_key_id
-   RAZORPAY_KEY_SECRET=your_key_secret
-   RAZORPAY_WEBHOOK_SECRET=your_webhook_secret
-   ```
-2. Set up webhook in Razorpay Dashboard pointing to: `https://your-domain.com/api/billing/webhook`
-3. Configure the following webhook events:
-   - `subscription.activated`
-   - `subscription.cancelled`
-   - `subscription.charged`
-   - `subscription.pending`
-   - `subscription.halted`
-   - `subscription.completed`
-   - `subscription.paused`
-   - `subscription.resumed`
 
-### Testing subscription flow
-- From the UI Billing page, start a Checkout session.
-- After successful checkout, the webhook updates the `subscriptions` table in Supabase.
-- Accessing gated APIs without an active subscription will return `402` with a message to upgrade.
+## 📚 API Documentation
 
-### Frontend handling of 402
-- Catch `402` responses in API calls and surface an upgrade CTA linking to the Billing page.
+API documentation is available at `/api-docs` when running the development server.
 
----
+## 🧪 Testing
+
+```bash
+# Run unit tests
+npm test
+
+# Run end-to-end tests
+npm run test:e2e
+
+# Run tests with coverage
+npm run test:coverage
+```
 
 ## 🤝 Contributing
 
-### 🎯 How to Contribute
+Contributions are welcome! Please follow these steps:
 
-1. **🍴 Fork the repository**
-2. **🌿 Create a feature branch**
-   ```bash
-   git checkout -b feature/amazing-feature
-   ```
-3. **💻 Make your changes**
-4. **✅ Commit your changes**
-   ```bash
-   git commit -m 'Add some amazing feature'
-   ```
-5. **🚀 Push to the branch**
-   ```bash
-   git push origin feature/amazing-feature
-   ```
-6. **📝 Open a Pull Request**
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add some amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
-### 📋 Development Guidelines
+## 🔒 Security
 
-- **✅ Follow TypeScript best practices**
-- **🎨 Use consistent code formatting**
-- **📝 Write meaningful commit messages**
-- **🧪 Test your changes thoroughly**
-- **📖 Update documentation as needed**
+### Reporting Vulnerabilities
 
----
+Please report any security vulnerabilities to security@genbook.ai
+
+### Security Measures
+
+- Row Level Security (RLS) in PostgreSQL
+- JWT authentication
+- CSRF protection
+- Rate limiting
+- Input validation
+- Secure headers
 
 ## 📄 License
 
-```
-MIT License
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-Copyright (c) 2024 GENBOOK.AI
+## 🙏 Acknowledgements
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNES FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-```
+- [Supabase](https://supabase.com) for the amazing backend platform
+- [Vite](https://vitejs.dev/) for the fast development experience
+- [Tailwind CSS](https://tailwindcss.com/) for the utility-first CSS framework
+- [React](https://reactjs.org/) for the UI library
+- [TypeScript](https://www.typescriptlang.org/) for type safety
 
 ---
 
 <div align="center">
-  <h3>🎉 Thank you for using GENBOOK.AI!</h3>
-  <p>If you found this project helpful, please consider giving it a ⭐ on GitHub!</p>
-  
+  <p>Built with ❤️ by the GENBOOK.AI Team</p>
   <p>
-    <strong>Made with ❤️ by the GENBOOK.AI Team</strong>
-  </p>
-  
-  <p>
-    <a href="#-overview">Back to Top ⬆️</a>
+    <a href="https://github.com/yashkatiyar24/genbook-ai">GitHub</a> • 
+    <a href="https://genbook.ai">Website</a> • 
+    <a href="https://twitter.com/genbookai">Twitter</a>
   </p>
 </div>
-
-3. Test the History View:
-   - Navigate to the History tab
-   - The component should fetch and display appointment history from Supabase
-
-4. Test the Settings View:
-   - Navigate to the Settings tab
-   - The component should fetch and display user profile, notification settings, and family members from Supabase
-   - Try updating your profile information and saving the changes
-
-### Troubleshooting
-
-#### Common Issues:
-
-1. **"Missing Supabase environment variables" error**
-   - Make sure your `.env` file exists and has the correct variable names
-   - Restart your development server after creating/updating `.env`
-
-2. **"Failed to fetch data" error**
-   - Check that the database migration was run successfully
-   - Verify your Supabase credentials are correct
-   - Check the browser console for detailed error messages
-
-3. **Row Level Security errors**
-   - For testing without authentication, you can temporarily disable RLS:
-     ```sql
-     ALTER TABLE appointments DISABLE ROW LEVEL SECURITY;
-     ALTER TABLE user_profiles DISABLE ROW LEVEL SECURITY;
-     ALTER TABLE user_settings DISABLE ROW LEVEL SECURITY;
-     ALTER TABLE family_members DISABLE ROW LEVEL SECURITY;
-     ```
-   - Remember to re-enable it for production use
-
-### Support
-
-If you encounter any issues:
-1. Check the Supabase documentation: https://supabase.com/docs
-2. Review the browser console for error messages
-3. Check the Supabase dashboard logs for server-side errors
