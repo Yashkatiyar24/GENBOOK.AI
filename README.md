@@ -1,4 +1,4 @@
-# 🏥 GENBOOK.AI
+# GENBOOK.AI
 
 <div align="center">
   <h1>GENBOOK.AI</h1>
@@ -19,7 +19,7 @@
   </p>
 </div>
 
-## 📋 Table of Contents
+## Table of Contents
 
 - [Overview](#-overview)
 - [Key Features](#-key-features)
@@ -37,37 +37,37 @@
 - [License](#-license)
 - [Acknowledgements](#-acknowledgements)
 
-## 🌟 Overview
+## Overview
 
 GENBOOK.AI is a comprehensive healthcare appointment management solution designed to streamline the scheduling process for medical practices and patients. Built with modern web technologies, it offers a secure, scalable, and user-friendly platform for managing appointments, patient records, and healthcare provider schedules.
 
-## ✨ Key Features
+## Key Features
 
-### 👥 User Management
+### User Management
 - **Secure Authentication** - JWT-based authentication with Supabase Auth
 - **Role-Based Access Control** - Different permissions for patients, doctors, and admins
 - **Profile Management** - Complete user profiles with medical history
 - **Family Accounts** - Manage appointments for family members
 
-### 📅 Appointment System
+### Appointment System
 - **Online Booking** - 24/7 appointment scheduling
 - **Calendar Integration** - Sync with popular calendar services
 - **Automated Reminders** - Email and SMS notifications
 - **Waitlist Management** - Automatic scheduling for cancellations
 
-### 🏥 Healthcare Features
+### Healthcare Features
 - **Electronic Health Records** - Secure patient records
 - **Telehealth** - Built-in video consultations
 - **Prescription Management** - Digital prescriptions
 - **Billing & Insurance** - Integrated payment processing
 
-### 🛠️ Admin Dashboard
+### Admin Dashboard
 - **Analytics** - Practice performance metrics
 - **Staff Management** - Schedule and permissions
 - **Reporting** - Custom reports and exports
 - **Settings** - Customize practice preferences
 
-## 🛠 Tech Stack
+## Tech Stack
 
 ### Frontend
 - **Framework**: React 18.2
@@ -92,7 +92,7 @@ GENBOOK.AI is a comprehensive healthcare appointment management solution designe
 - **Monitoring**: Sentry
 - **Logging**: Pino
 
-## 🚀 Getting Started
+## Getting Started
 
 ### Prerequisites
 
@@ -134,7 +134,7 @@ GENBOOK.AI is a comprehensive healthcare appointment management solution designe
    http://localhost:5173
    ```
 
-## ⚙️ Configuration
+## Configuration
 
 ### Environment Variables
 
@@ -153,7 +153,7 @@ VITE_APP_NAME="GENBOOK.AI"
 VITE_APP_URL=http://localhost:5173
 ```
 
-## 🛠 Development
+## Development
 
 ### Available Scripts
 
@@ -172,7 +172,7 @@ This project uses:
 - Prettier for code formatting
 - TypeScript for type checking
 
-## 🚀 Deployment
+## Deployment
 
 ### Production Build
 
@@ -193,11 +193,11 @@ npm run build
    docker run -p 3000:3000 genbook-ai
    ```
 
-## 📚 API Documentation
+## API Documentation
 
 API documentation is available at `/api-docs` when running the development server.
 
-## 🧪 Testing
+## Testing
 
 ```bash
 # Run unit tests
@@ -210,7 +210,7 @@ npm run test:e2e
 npm run test:coverage
 ```
 
-## 🤝 Contributing
+## Contributing
 
 Contributions are welcome! Please follow these steps:
 
@@ -220,11 +220,11 @@ Contributions are welcome! Please follow these steps:
 4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
 
-## 🔒 Security
+## Security
 
 ### Reporting Vulnerabilities
 
-Please report any security vulnerabilities to security@genbook.ai
+Please report any security vulnerabilities to helpgenbook@gmail.com.in
 
 ### Security Measures
 
@@ -235,11 +235,11 @@ Please report any security vulnerabilities to security@genbook.ai
 - Input validation
 - Secure headers
 
-## 📄 License
+## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## 🙏 Acknowledgements
+## Acknowledgements
 
 - [Supabase](https://supabase.com) for the amazing backend platform
 - [Vite](https://vitejs.dev/) for the fast development experience
