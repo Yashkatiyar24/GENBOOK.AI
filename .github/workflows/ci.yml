@@ -84,7 +84,7 @@ jobs:
 
       - name: Upload coverage artifact
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: coverage-${{ matrix.node }}
           path: coverage
@@ -97,7 +97,7 @@ jobs:
         run: npm run build:server
 
       - name: Upload dist artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: dist-bundles-${{ matrix.node }}
           path: |
@@ -107,7 +107,7 @@ jobs:
 
       - name: Upload combined coverage (frontend + server)
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: coverage-raw-${{ matrix.node }}
           path: coverage
@@ -175,7 +175,7 @@ jobs:
         run: npx playwright test --shard=${{ matrix.shard }}/2
       - name: Upload Playwright report shard ${{ matrix.shard }}
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: playwright-report-shard-${{ matrix.shard }}
           path: playwright-report
