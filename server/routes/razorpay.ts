@@ -116,8 +116,7 @@ const requireAuth = async (req: Request, res: Response, next: any) => {
 };
 
 // Create Razorpay order with enhanced error handling
-router.post('/create-order',requireAuth, async (req: Request, res: Response) => {
-  debugger;
+router.post('/create-order', requireAuth, async (req: Request, res: Response) => {
   console.log('[Razorpay] Create order request received:', {
     body: req.body,
     headers: req.headers,
@@ -493,11 +492,9 @@ router.post('/cancel-subscription', requireAuth, async (req: Request, res: Respo
 });
 
 // Health check endpoint
-router.get('/health', (req: Request, res: Response) => {
-  debugger;
-  console.dir('this is health api')
+router.get('/health', (_req: Request, res: Response) => {
   res.json({ 
-    status: 'okkkk', 
+    status: 'ok', 
     timestamp: new Date().toISOString(),
     razorpayConfigured: !!(process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET)
   });

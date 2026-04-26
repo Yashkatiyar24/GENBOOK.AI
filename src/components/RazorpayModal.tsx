@@ -1,5 +1,6 @@
 
 import React, { useState } from "react";
+import { supabase } from '../supabase';
 
 const MODAL_BG = "bg-gradient-to-br from-[#0f172a] via-[#1e293b] to-[#334155]"; // GenBook.AI dark theme
 
@@ -40,18 +41,25 @@ export default function RazorpayModal({ open, onClose, plan, user, onSuccess }: 
       }
 
       // 1. Create order on backend
-      const res = await fetch("/api/razorpay/order", {
+      const { data: { session } } = await supabase.auth.getSession();
+      const authHeaders: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+      if (session?.access_token) {
+        authHeaders['Authorization'] = `Bearer ${session.access_token}`;
+      }
+
+      const res = await fetch("/api/razorpay/create-order", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: authHeaders,
         body: JSON.stringify({
+          planId: plan.name.toLowerCase(),
           amount: plan.price * 100, // Convert to paise
-          currency: "INR",
-          receipt: `order_${Date.now()}`,
-          notes: {
-            plan: plan.name,
-            customer_name: name,
-            customer_email: email,
-            customer_phone: countryCode + phone
+          userDetails: {
+            fullName: name,
+            email: email,
+            phone: countryCode + phone,
+            company: ''
           }
         }),
       });
@@ -79,14 +87,20 @@ export default function RazorpayModal({ open, onClose, plan, user, onSuccess }: 
         handler: async function (response: any) {
           try {
             // 3. Verify payment on backend
-            const verifyRes = await fetch("/api/razorpay/verify", {
+            const verifyRes = await fetch("/api/razorpay/verify-payment", {
               method: "POST",
-              headers: { "Content-Type": "application/json" },
+              headers: authHeaders,
               body: JSON.stringify({
                 razorpay_payment_id: response.razorpay_payment_id,
                 razorpay_order_id: response.razorpay_order_id,
                 razorpay_signature: response.razorpay_signature,
-                plan: plan.name
+                planId: plan.name.toLowerCase(),
+                userDetails: {
+                  fullName: name,
+                  email: email,
+                  phone: countryCode + phone,
+                  company: ''
+                }
               }),
             });
 

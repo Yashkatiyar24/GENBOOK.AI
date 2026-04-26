@@ -402,6 +402,21 @@ const BillingView: React.FC<BillingViewProps> = ({ user: _user }) => {
     fetchCurrentSubscription();
   }, []);
 
+  // Listen for triggerUpgrade events from PricingPage
+  useEffect(() => {
+    const handleTriggerUpgrade = (e: Event) => {
+      const { planKey, billingCycle: cycle } = (e as CustomEvent).detail || {};
+      if (cycle) setBillingCycle(cycle);
+      const plan = plans.find(p => p.id === planKey);
+      if (plan && plan.id !== 'starter' && plan.id !== currentPlan) {
+        setSelectedPlan(plan);
+        setShowUserDetailsModal(true);
+      }
+    };
+    window.addEventListener('triggerUpgrade', handleTriggerUpgrade);
+    return () => window.removeEventListener('triggerUpgrade', handleTriggerUpgrade);
+  }, [currentPlan]);
+
   const fetchCurrentSubscription = async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -459,8 +474,8 @@ const BillingView: React.FC<BillingViewProps> = ({ user: _user }) => {
     setIsLoading(true);
     
     try {
-      // Prefer proxy (/api). If a VITE_API_BASE_URL is provided, use that instead (helps when proxy is misconfigured)
-      const apiBase = (import.meta as any).env?.VITE_API_BASE_URL_2 || '/api';
+      // Use relative paths — Vite proxy handles dev, and production uses same origin
+      const apiBase = '/api/razorpay';
       // Load Razorpay script
       const scriptLoaded = await loadRazorpayScript();
       if (!scriptLoaded) {
@@ -478,7 +493,7 @@ const BillingView: React.FC<BillingViewProps> = ({ user: _user }) => {
         setIsLoading(false);
         return;
       }
-      const response = await fetch('https://genbook-ai-8yom.onrender.com/api/razorpay/create-order', {
+      const response = await fetch(`${apiBase}/create-order`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -546,7 +561,7 @@ const BillingView: React.FC<BillingViewProps> = ({ user: _user }) => {
         handler: async function (response: any) {
           try {
             // Verify payment on backend
-            const verifyResponse = await fetch(`${apiBase}/razorpay/verify-payment`, {
+            const verifyResponse = await fetch(`${apiBase}/verify-payment`, {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',

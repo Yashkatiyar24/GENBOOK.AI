@@ -25,11 +25,21 @@ interface SubscriptionResult {
   error?: string;
 }
 
-// Initialize Razorpay with error handling
-const razorpay = new Razorpay({
-  key_id: process.env.RAZORPAY_KEY_ID || '',
-  key_secret: process.env.RAZORPAY_KEY_SECRET || ''
-});
+// Lazy singleton – initialized on first use to avoid crashing when env vars are absent
+let _razorpayInstance: InstanceType<typeof Razorpay> | null = null;
+
+function getRazorpay(): InstanceType<typeof Razorpay> {
+  if (!_razorpayInstance) {
+    if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
+      throw new Error('Razorpay credentials not configured');
+    }
+    _razorpayInstance = new Razorpay({
+      key_id: process.env.RAZORPAY_KEY_ID,
+      key_secret: process.env.RAZORPAY_KEY_SECRET,
+    });
+  }
+  return _razorpayInstance;
+}
 
 /**
  * Creates a new subscription in Razorpay
@@ -46,7 +56,7 @@ export const createSubscription = async (
   }
 
   try {
-    const subscription = await razorpay.subscriptions.create({
+    const subscription = await getRazorpay().subscriptions.create({
       plan_id: planId,
       total_count: 12, // 1 year subscription
       customer_notify: 1,
@@ -83,10 +93,10 @@ export const updateSubscription = async (
 ): Promise<SubscriptionResult> => {
   try {
     // Get current subscription details
-    const currentSub = await razorpay.subscriptions.fetch(subscriptionId);
+    const currentSub = await getRazorpay().subscriptions.fetch(subscriptionId);
     
     // Create a new subscription with the new plan
-    const newSubscription = await razorpay.subscriptions.create({
+    const newSubscription = await getRazorpay().subscriptions.create({
   plan_id: newPlanId,
   customer_notify: 1,
   total_count: 12,
@@ -96,7 +106,7 @@ export const updateSubscription = async (
 
 
     // Cancel the old subscription
-    await razorpay.subscriptions.cancel(subscriptionId);
+    await getRazorpay().subscriptions.cancel(subscriptionId);
 
     return { success: true, subscription: newSubscription };
   } catch (error: any) {
@@ -116,16 +126,16 @@ export const cancelSubscription = async (
 ): Promise<SubscriptionResult> => {
   try {
     // Fetch current subscription first to get details
-    const subscription = await razorpay.subscriptions.fetch(subscriptionId);
+    const subscription = await getRazorpay().subscriptions.fetch(subscriptionId);
     
     // Only cancel if not already cancelled/completed
     if (!['cancelled', 'completed'].includes(subscription.status)) {
-      await razorpay.subscriptions.cancel(subscriptionId);
+      await getRazorpay().subscriptions.cancel(subscriptionId);
     }
 
     return { 
       success: true, 
-      subscription: await razorpay.subscriptions.fetch(subscriptionId) 
+      subscription: await getRazorpay().subscriptions.fetch(subscriptionId) 
     };
   } catch (error: any) {
     console.error('Error cancelling Razorpay subscription:', error);
@@ -143,7 +153,7 @@ export const getSubscription = async (
   subscriptionId: string
 ): Promise<SubscriptionResult> => {
   try {
-    const subscription = await razorpay.subscriptions.fetch(subscriptionId);
+    const subscription = await getRazorpay().subscriptions.fetch(subscriptionId);
     return { success: true, subscription };
   } catch (error: any) {
     console.error('Error fetching Razorpay subscription:', error);

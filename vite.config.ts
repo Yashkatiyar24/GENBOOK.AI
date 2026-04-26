@@ -12,7 +12,42 @@ export default defineConfig({
   server: {
     proxy: {
       '/api': {
-        target: `http://localhost:${process.env.PORT || 3001}`, // 👈 match your API port
+        target: `http://localhost:${process.env.PORT || 3001}`,
+        changeOrigin: true,
+        secure: false,
+      },
+      '/auth': {
+        target: `http://localhost:${process.env.PORT || 3001}`,
+        changeOrigin: true,
+        secure: false,
+      },
+      '/billing': {
+        target: `http://localhost:${process.env.PORT || 3001}`,
+        changeOrigin: true,
+        secure: false,
+      },
+      '/webhooks': {
+        target: `http://localhost:${process.env.PORT || 3001}`,
+        changeOrigin: true,
+        secure: false,
+      },
+      '/health': {
+        target: `http://localhost:${process.env.PORT || 3001}`,
+        changeOrigin: true,
+        secure: false,
+      },
+      '/ready': {
+        target: `http://localhost:${process.env.PORT || 3001}`,
+        changeOrigin: true,
+        secure: false,
+      },
+      '/metrics': {
+        target: `http://localhost:${process.env.PORT || 3001}`,
+        changeOrigin: true,
+        secure: false,
+      },
+      '/api-docs': {
+        target: `http://localhost:${process.env.PORT || 3001}`,
         changeOrigin: true,
         secure: false,
       },

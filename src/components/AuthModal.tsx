@@ -100,16 +100,18 @@ const AuthModal = ({
     }
     setIsSubmitting(true);
     try {
-      const { error } = await signIn(email, ''); // Using signIn to trigger password reset
-      if (error?.message?.includes('Invalid login credentials')) {
-        setSuccess('If an account exists with this email, you will receive a password reset link.');
-      } else if (error) {
+      // Import supabase directly to call resetPasswordForEmail
+      const { supabase } = await import('../utils/supabaseClient');
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/#type=recovery`,
+      });
+      if (error) {
         throw error;
-      } else {
-        setSuccess('Password reset email sent. Please check your inbox.');
       }
+      setSuccess('Password reset email sent! Please check your inbox (and spam folder).');
     } catch (err: any) {
-      setError(err?.message || 'Failed to send password reset email.');
+      console.error('Forgot password error:', err);
+      setError(err?.message || 'Failed to send password reset email. Please try again.');
     } finally {
       setIsSubmitting(false);
     }

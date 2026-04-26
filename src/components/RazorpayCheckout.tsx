@@ -104,24 +104,14 @@ export default function RazorpayCheckout({
           throw new Error('Razorpay not available in window object. Make sure the Razorpay script is loading correctly.');
         }
 
-        // Get the appropriate key based on environment
-        const razorpayKey = import.meta.env.PROD 
-          ? import.meta.env.VITE_RAZORPAY_LIVE_KEY_ID 
-          : import.meta.env.VITE_RAZORPAY_KEY_ID || import.meta.env.VITE_RAZORPAY_LIVE_KEY_ID;
-          
-        const razorpaySecret = import.meta.env.PROD
-          ? import.meta.env.VITE_RAZORPAY_LIVE_KEY_SECRET
-          : import.meta.env.VITE_RAZORPAY_KEY_SECRET || import.meta.env.VITE_RAZORPAY_LIVE_KEY_SECRET;
+        // Get the Razorpay public key (NEVER use secret on the client)
+        const razorpayKey = import.meta.env.VITE_RAZORPAY_KEY_ID;
 
         console.log('Environment:', import.meta.env.PROD ? 'Production' : 'Development');
         console.log('Using Razorpay key (first 8 chars):', razorpayKey ? `${razorpayKey.substring(0, 8)}...` : 'NOT FOUND');
         
-        if (!razorpayKey || !razorpaySecret) {
-          const missingVars = [];
-          if (!razorpayKey) missingVars.push('VITE_RAZORPAY_LIVE_KEY_ID');
-          if (!razorpaySecret) missingVars.push('VITE_RAZORPAY_LIVE_KEY_SECRET');
-          
-          throw new Error(`Razorpay configuration incomplete. Missing: ${missingVars.join(', ')}`);
+        if (!razorpayKey) {
+          throw new Error('Razorpay configuration incomplete. Missing: VITE_RAZORPAY_KEY_ID');
         }
 
         const options: RazorpayOptions = {
@@ -142,8 +132,8 @@ export default function RazorpayCheckout({
             try {
               console.log('Razorpay payment response:', response);
               
-              // Verify the payment signature
-              const verifyResponse = await fetch('/api/verify-razorpay-payment', {
+              // Verify the payment signature on the server
+              const verifyResponse = await fetch('/api/razorpay/verify-payment', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({

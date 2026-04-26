@@ -2,10 +2,10 @@ import dotenv from 'dotenv';
 import { fileURLToPath } from 'url';
 import { dirname, resolve } from 'path';
 
-// Load environment variables from .env file
+// Load environment variables from project root .env file
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
-dotenv.config({ path: resolve(__dirname, '.env') });
+dotenv.config({ path: resolve(__dirname, '..', '.env') });
 
 import express from 'express';
 import type { Request, Response, NextFunction } from 'express';
@@ -201,8 +201,8 @@ app.use('/api/email', emailRoutes);
 const contactLimiter = rateLimit({ windowMs: 60_000, max: 5, standardHeaders: true, legacyHeaders: false });
 app.use('/api/contact', contactLimiter, contactRoutes);
 
-// Public webhooks (no tenant middleware)
-app.use('/webhooks', webhooksRoutes);
+// Note: webhooks are already mounted above (line ~109) with raw body parser
+// Do NOT mount again here to avoid duplicate route handling
 
 // Apply tenant middleware to all other routes
 app.use(tenantMiddleware);
@@ -296,7 +296,7 @@ if (process.env.NODE_ENV !== 'test') {
   console.log('Starting server...');
   startServer();
 }
-console.log(process.env.NODE_ENV);
+
 export default app;
 
 // Global process-level safeguards

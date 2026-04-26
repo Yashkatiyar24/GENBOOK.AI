@@ -229,13 +229,12 @@ const PricingPage: React.FC<PricingPageProps> = ({ onGetStarted, onSupport, onCo
               <button
                 className={`mt-8 w-full py-2.5 rounded-lg font-medium transition-all flex items-center justify-center gap-2 ${p.popular ? 'bg-gradient-to-r from-cyan-400 to-blue-500 text-black hover:shadow-[0_0_20px_rgba(6,182,212,0.5)]' : 'bg-white/10 hover:bg-white/15'}`}
                 onClick={() => {
-                  if (p.key === 'professional') {
-                    // Deep link to Billing upgrade (same priceId names as BillingView buttons)
-                    window.location.hash = '#/billing';
-                  } else if (p.key === 'enterprise') {
-                    window.location.href = 'mailto:sales@genbook.ai?subject=GenBook%20Enterprise%20Inquiry';
-                  } else {
+                  if (p.key === 'free') {
                     window.location.hash = '#/signup';
+                  } else {
+                    // Navigate to Billing and auto-trigger upgrade for the selected plan
+                    window.dispatchEvent(new CustomEvent('triggerUpgrade', { detail: { planKey: p.key, billingCycle } }));
+                    window.dispatchEvent(new CustomEvent('tabChange', { detail: 'Billing' }));
                   }
                 }}
               >
