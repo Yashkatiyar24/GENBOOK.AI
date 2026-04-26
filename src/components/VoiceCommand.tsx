@@ -1,12 +1,9 @@
-import React, { useState, useEffect, useRef, useCallback, FC } from 'react';
-import { Mic, MicOff, X } from 'lucide-react';
+import React, { useState, useEffect, useRef, FC } from 'react';
+import { Mic, MicOff, X, Send, Volume2, VolumeX } from 'lucide-react';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
-import { useFeatureAccess } from '../hooks/useFeatureAccess';
-import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { createAppointment } from '../utils/supabaseClient';
 
-// Type declarations
 interface VoiceCommandProps {
   user: SupabaseUser | null;
   isOpen: boolean;
@@ -44,342 +41,424 @@ declare global {
   }
 }
 
-const VoiceCommand: FC<VoiceCommandProps> = ({
-  user: _user,
-  isOpen,
-  onClose: handleClose,
-  onAppointmentBooked,
-}) => {
-  // State management
+// --- Natural language date/time parser ---
+function parseNaturalDateTime(text: string): { date: string; time: string } | null {
+  const now = new Date();
+  let date = '';
+  let time = '';
+  const lower = text.toLowerCase();
+
+  if (lower.includes('today')) {
+    date = formatDate(now);
+  } else if (lower.includes('day after tomorrow')) {
+    const d = new Date(now); d.setDate(d.getDate() + 2); date = formatDate(d);
+  } else if (lower.includes('tomorrow')) {
+    const d = new Date(now); d.setDate(d.getDate() + 1); date = formatDate(d);
+  } else {
+    const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+    for (let i = 0; i < dayNames.length; i++) {
+      if (lower.includes(dayNames[i])) {
+        const d = new Date(now);
+        const diff = (i - d.getDay() + 7) % 7 || 7;
+        d.setDate(d.getDate() + diff);
+        date = formatDate(d);
+        break;
+      }
+    }
+  }
+
+  const timeMatch = lower.match(/(\d{1,2}):?(\d{2})?\s*(am|pm|a\.m\.|p\.m\.)?/);
+  if (timeMatch) {
+    let hours = parseInt(timeMatch[1], 10);
+    const minutes = timeMatch[2] ? parseInt(timeMatch[2], 10) : 0;
+    const ampm = timeMatch[3]?.replace(/\./g, '');
+    if (ampm === 'pm' && hours < 12) hours += 12;
+    if (ampm === 'am' && hours === 12) hours = 0;
+    if (!ampm && hours >= 1 && hours <= 7) hours += 12; // assume PM for 1-7 without ampm
+    time = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+  }
+
+  if (!date && !time) return null;
+  if (!date) date = formatDate(now);
+  if (!time) {
+    const nextHour = new Date(now); nextHour.setHours(nextHour.getHours() + 1, 0, 0, 0);
+    time = `${nextHour.getHours().toString().padStart(2, '0')}:00`;
+  }
+  return { date, time };
+}
+
+function formatDate(d: Date): string { return d.toISOString().split('T')[0]; }
+
+function formatTimeDisplay(time24: string): string {
+  const [h, m] = time24.split(':').map(Number);
+  return `${h % 12 || 12}:${m.toString().padStart(2, '0')} ${h >= 12 ? 'PM' : 'AM'}`;
+}
+
+function formatDateDisplay(dateStr: string): string {
+  return new Date(dateStr + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+}
+
+// --- Booking state stored in a ref to avoid stale closures ---
+interface BookingState {
+  step: 'idle' | 'title' | 'datetime' | 'confirm';
+  title: string;
+  date: string;
+  time: string;
+}
+
+const VoiceCommand: FC<VoiceCommandProps> = ({ user: _user, isOpen, onClose: handleClose, onAppointmentBooked }) => {
   const [isListening, setIsListening] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isSupported, setIsSupported] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
   const [transcript, setTranscript] = useState('');
-  const [response, setResponse] = useState('');
+  const [messages, setMessages] = useState<{ role: 'assistant' | 'user'; text: string }[]>([]);
   const [error, setError] = useState('');
-  const [showTextInput, setShowTextInput] = useState(false);
-  const [speechRecognitionFailed, setSpeechRecognitionFailed] = useState(false);
-  const [isSpeaking, setIsSpeaking] = useState(false);
-  const [bookingStep, setBookingStep] = useState<'idle' | 'provider' | 'datetime' | 'location' | 'confirm'>('idle');
-  const [appointmentDetails, setAppointmentDetails] = useState({
-    provider: '',
-    date: '',
-    time: '',
-    location: '',
-    meetingLink: ''
-  });
-  const [availableProviders, setAvailableProviders] = useState(['Dr. Smith', 'Dr. Jones', 'Dr. Williams']);
-  const [availableTimeSlots, setAvailableTimeSlots] = useState(['9:00 AM', '10:00 AM', '11:00 AM']);
+  const [textInput, setTextInput] = useState('');
+  const [ttsEnabled, setTtsEnabled] = useState(true);
 
+  const bookingRef = useRef<BookingState>({ step: 'idle', title: '', date: '', time: '' });
   const recognitionRef = useRef<SpeechRecognition | null>(null);
-  const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
-  const synthesis = typeof window !== 'undefined' ? window.speechSynthesis : null;
-  const navigate = useNavigate();
-  const { hasAccess, isLoading: isAccessLoading } = useFeatureAccess('voice_commands');
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const isListeningRef = useRef(false);
+  const shouldAutoListen = useRef(false);
 
-  // Initialize speech recognition
-  const initializeSpeechRecognition = useCallback((): SpeechRecognition | null => {
-    try {
-      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-      if (!SpeechRecognition) {
-        console.error('Speech Recognition API not supported');
-        setIsSupported(false);
-        return null;
-      }
+  useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
 
-      const recognition = new SpeechRecognition();
-      recognition.continuous = true;
-      recognition.interimResults = true;
-      recognition.lang = 'en-US';
-
-      recognition.onresult = (event: SpeechRecognitionEvent) => {
-        const transcript = Array.from(event.results)
-          .map(result => result[0])
-          .map(result => result.transcript)
-          .join('');
-
-        setTranscript(transcript);
-
-        if (event.results[0].isFinal) {
-          processCommand(transcript);
-        }
-      };
-
-      recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
-        console.error('Speech recognition error:', event.error);
-        setError(`Error: ${event.error}`);
-        setIsListening(false);
-        setSpeechRecognitionFailed(true);
-      };
-
-      recognition.onend = () => {
-        if (isListening) {
-          recognition.start();
-        }
-      };
-
-      setIsSupported(true);
-      return recognition;
-    } catch (err) {
-      console.error('Error initializing speech recognition:', err);
-      setIsSupported(false);
-      return null;
-    }
-  }, [isListening]);
-
-  // Toggle listening state
-  const toggleListening = useCallback(() => {
-    if (isListening) {
-      recognitionRef.current?.stop();
-      setIsListening(false);
-    } else {
-      if (recognitionRef.current) {
-        recognitionRef.current.start();
-        setIsListening(true);
-        setError('');
-      }
-    }
-  }, [isListening]);
-
-  // Process voice command
-  const processCommand = useCallback((command: string) => {
-    console.log('Processing command:', command);
-    const normalizedCommand = command.toLowerCase().trim();
-    
-    // Handle booking flow
-    if (bookingStep !== 'idle' || normalizedCommand.includes('book') || normalizedCommand.includes('schedule')) {
-      handleBookingStep(command);
+  // --- Text-to-speech ---
+  const speak = (text: string, thenListen = true) => {
+    if (!ttsEnabled || typeof window === 'undefined' || !window.speechSynthesis) {
+      if (thenListen) startListeningDelayed();
       return;
     }
-    
-    // Add other command handlers here
-    setResponse(`I heard: ${command}`);
-  }, [bookingStep]);
+    window.speechSynthesis.cancel();
+    // Strip emoji for cleaner TTS
+    const clean = text.replace(/[\u{1F000}-\u{1FFFF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]|[📋📅🕐📍✅❌⚠️•]/gu, '').replace(/\n+/g, '. ').trim();
+    const utterance = new SpeechSynthesisUtterance(clean);
+    utterance.lang = 'en-US';
+    utterance.rate = 1.05;
+    utterance.pitch = 1;
+    utterance.onend = () => { if (thenListen) startListeningDelayed(); };
+    utterance.onerror = () => { if (thenListen) startListeningDelayed(); };
+    window.speechSynthesis.speak(utterance);
+  };
 
-  // Handle booking flow steps
-  const handleBookingStep = useCallback(async (command: string) => {
-    const normalizedCommand = command.toLowerCase().trim();
-    
-    switch (bookingStep) {
-      case 'idle':
-        if (normalizedCommand.includes('book') || normalizedCommand.includes('schedule')) {
-          setBookingStep('provider');
-          setResponse(`Which provider would you like to book with? Available providers are: ${availableProviders.join(', ')}`);
-        }
-        break;
-        
-      case 'provider': {
-        const extractedProvider = command.replace(/^(book|schedule|with|an?|appointment|for)/i, '').trim();
-        if (extractedProvider && availableProviders.includes(extractedProvider)) {
-          setAppointmentDetails(prev => ({ ...prev, provider: extractedProvider }));
-          setBookingStep('datetime');
-          setResponse(`Got it, ${extractedProvider}. What date and time should I schedule it for? Available times are: ${availableTimeSlots.join(', ')}`);
-        } else {
-          setResponse(`I didn\'t catch the provider name or the provider is invalid. Please choose from: ${availableProviders.join(', ')}`);
-        }
-        break;
+  const startListeningDelayed = () => {
+    setTimeout(() => {
+      if (recognitionRef.current && !isListeningRef.current) {
+        try {
+          recognitionRef.current.start();
+          setIsListening(true);
+          isListeningRef.current = true;
+        } catch { /* already started */ }
       }
-      
-      case 'datetime': {
-        const extractedTime = command.replace(/^(book|schedule|with|an?|appointment|for|on)/i, '').trim();
-        if (extractedTime && availableTimeSlots.includes(extractedTime)) {
-          setAppointmentDetails(prev => ({ ...prev, date: '', time: extractedTime })); // remove hardcoded date
-          setBookingStep('location');
-          setResponse('Would you like this to be an online or offline appointment?');
-        } else {
-          setResponse('I didn\'t catch that. What date and time?');
-        }
-        break;
-      }
+    }, 300);
+  };
 
-      case 'location': {
-        const location = normalizedCommand.includes('online') ? 'online' : (normalizedCommand.includes('offline') ? 'offline' : '');
-        if (location) {
-          setAppointmentDetails(prev => ({ ...prev, location }));
-          setBookingStep('confirm');
-          const { provider, date } = appointmentDetails;
-          setResponse(`Great! I’ve scheduled your appointment with ${provider} on ${date} at ${appointmentDetails.time} (${location}). Is that correct?`);
-        } else {
-          setResponse('Online or offline?');
-        }
-        break;
-      }
+  // --- Message helpers ---
+  const addMsg = (role: 'assistant' | 'user', text: string) => setMessages(prev => [...prev, { role, text }]);
 
-      case 'confirm': {
-        if (normalizedCommand.includes('yes')) {
-          setIsProcessing(true);
-          try {
-            const { provider, date, time, location } = appointmentDetails;
-            const newAppointment = {
-              user_id: _user!.id,
-              title: `Appointment with ${provider}`,
-              start_time: new Date(), // This needs to be fixed later, to include user input for date
-              end_time: new Date(new Date().getTime() + 30 * 60000),
-              provider,
-              is_online: location === 'online',
-            };
-            
-            const bookedAppointment = await createAppointment(newAppointment as any);
-            
-            if (onAppointmentBooked) {
-              onAppointmentBooked(bookedAppointment);
-            }
-            
-            setResponse(`Great! I’ve scheduled your appointment with ${provider} on ${date} at ${time} (${location}).`);
-            toast.success('Appointment booked successfully!');
-            
-            // Reset state
-            setBookingStep('idle');
-            setAppointmentDetails({ provider: '', date: '', time: '', location: '', meetingLink: '' });
+  const addAssistantAndSpeak = (text: string, thenListen = true) => {
+    addMsg('assistant', text);
+    speak(text, thenListen);
+  };
 
-          } catch (error) {
-            console.error(error);
-            setResponse('Sorry, something went wrong.');
-            setError('Could not book appointment.');
-          } finally {
-            setIsProcessing(false);
-          }
-        } else {
-          setBookingStep('idle');
-          setResponse('Okay, starting over. Say "Book an appointment" to begin.');
-        }
-        break;
-      }
-      
-      default:
-        setResponse('I\'m not sure how to handle that. Please try again.');
-    }
-  }, [bookingStep, appointmentDetails, _user, onAppointmentBooked, availableProviders, availableTimeSlots]);
-
-  // Initialize on mount
+  // --- Speech recognition setup ---
   useEffect(() => {
     if (!isOpen) return;
-    
-    const recognition = initializeSpeechRecognition();
-    recognitionRef.current = recognition;
-    
-    return () => {
-      if (recognitionRef.current) {
-        recognitionRef.current.stop();
-      }
-    };
-  }, [isOpen, initializeSpeechRecognition]);
 
-  // Clean up on unmount
-  useEffect(() => {
-    return () => {
-      if (recognitionRef.current) {
-        recognitionRef.current.stop();
+    bookingRef.current = { step: 'idle', title: '', date: '', time: '' };
+    setMessages([]);
+    setTranscript('');
+    setError('');
+
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SR) { setIsSupported(false); return; }
+    setIsSupported(true);
+
+    const recognition = new SR();
+    recognition.continuous = false;
+    recognition.interimResults = true;
+    recognition.lang = 'en-US';
+
+    recognition.onresult = (event: SpeechRecognitionEvent) => {
+      let finalTranscript = '';
+      let interimTranscript = '';
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const t = event.results[i][0].transcript;
+        if (event.results[i].isFinal) { finalTranscript += t; } else { interimTranscript += t; }
       }
-      if (synthesis && isSpeaking) {
-        synthesis.cancel();
+      if (interimTranscript) setTranscript(interimTranscript);
+      if (finalTranscript) {
+        setTranscript('');
+        processCommand(finalTranscript.trim());
       }
     };
-  }, [synthesis, isSpeaking]);
+
+    recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
+      console.error('Speech error:', event.error);
+      isListeningRef.current = false;
+      setIsListening(false);
+      if (event.error === 'no-speech') {
+        // Auto-restart if we were in a booking flow
+        if (bookingRef.current.step !== 'idle') startListeningDelayed();
+      } else if (event.error !== 'aborted') {
+        setError(`Mic error: ${event.error}. You can also type below.`);
+      }
+    };
+
+    recognition.onend = () => {
+      isListeningRef.current = false;
+      setIsListening(false);
+    };
+
+    recognitionRef.current = recognition;
+
+    // Welcome message with slight delay
+    setTimeout(() => {
+      addAssistantAndSpeak(
+        'Hi! I can book appointments for you. Say something like "Book a meeting tomorrow at 3pm" or just say "Book appointment".',
+        true
+      );
+    }, 400);
+
+    return () => {
+      recognition.stop();
+      isListeningRef.current = false;
+      window.speechSynthesis?.cancel();
+    };
+  }, [isOpen]);
+
+  // --- Toggle mic manually ---
+  const toggleListening = () => {
+    if (isListeningRef.current) {
+      recognitionRef.current?.stop();
+      isListeningRef.current = false;
+      setIsListening(false);
+    } else if (recognitionRef.current) {
+      window.speechSynthesis?.cancel(); // stop any TTS
+      setError('');
+      try {
+        recognitionRef.current.start();
+        isListeningRef.current = true;
+        setIsListening(true);
+      } catch { /* already started */ }
+    }
+  };
+
+  // --- Process command (uses ref to avoid stale closure) ---
+  const processCommand = (text: string) => {
+    addMsg('user', text);
+    const lower = text.toLowerCase().trim();
+    const b = bookingRef.current;
+
+    if (b.step === 'idle') {
+      if (lower.includes('book') || lower.includes('schedule') || lower.includes('appointment') || lower.includes('meeting') || lower.includes('call')) {
+        const parsed = parseNaturalDateTime(text);
+        // Try extracting title from "book a <title> tomorrow at 3pm"
+        const titleMatch = text.match(/(?:book|schedule)\s+(?:a|an)?\s*(.*?)(?:\s+(?:on|at|for|tomorrow|today|next|monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b)/i);
+        const title = titleMatch?.[1]?.trim() || '';
+
+        if (parsed && title) {
+          bookingRef.current = { step: 'confirm', title, date: parsed.date, time: parsed.time };
+          addAssistantAndSpeak(`Got it! Here's what I have:\n📋 ${title}\n📅 ${formatDateDisplay(parsed.date)}\n🕐 ${formatTimeDisplay(parsed.time)}\n📍 Online\n\nShall I confirm this? Say yes or no.`);
+        } else if (parsed) {
+          bookingRef.current = { ...b, step: 'title', date: parsed.date, time: parsed.time };
+          addAssistantAndSpeak(`I'll schedule that for ${formatDateDisplay(parsed.date)} at ${formatTimeDisplay(parsed.time)}. What should I call this appointment?`);
+        } else {
+          bookingRef.current = { ...b, step: 'title' };
+          addAssistantAndSpeak('Sure! What would you like to name this appointment?');
+        }
+      } else {
+        addAssistantAndSpeak('I can help you book appointments! Try saying "Book a meeting tomorrow at 3pm" or "Schedule an appointment".');
+      }
+      return;
+    }
+
+    if (b.step === 'title') {
+      bookingRef.current = { ...b, step: b.date ? 'confirm' : 'datetime', title: text };
+      if (b.date && b.time) {
+        addAssistantAndSpeak(`Here's your appointment:\n📋 ${text}\n📅 ${formatDateDisplay(b.date)}\n🕐 ${formatTimeDisplay(b.time)}\n📍 Online\n\nShall I confirm? Say yes or no.`);
+      } else {
+        addAssistantAndSpeak(`"${text}" — got it! When should I schedule it? Say something like "tomorrow at 3pm" or "Monday 10am".`);
+      }
+      return;
+    }
+
+    if (b.step === 'datetime') {
+      const parsed = parseNaturalDateTime(text);
+      if (parsed) {
+        bookingRef.current = { ...b, step: 'confirm', date: parsed.date, time: parsed.time };
+        addAssistantAndSpeak(`Here's your appointment:\n📋 ${b.title}\n📅 ${formatDateDisplay(parsed.date)}\n🕐 ${formatTimeDisplay(parsed.time)}\n📍 Online\n\nShall I confirm? Say yes or no.`);
+      } else {
+        addAssistantAndSpeak('I couldn\'t understand the date and time. Try saying "tomorrow at 3pm" or "next Monday at 10am".');
+      }
+      return;
+    }
+
+    if (b.step === 'confirm') {
+      if (lower.includes('yes') || lower.includes('confirm') || lower.includes('sure') || lower.includes('yeah') || lower.includes('ok')) {
+        confirmBooking();
+      } else if (lower.includes('no') || lower.includes('cancel') || lower.includes('start over')) {
+        bookingRef.current = { step: 'idle', title: '', date: '', time: '' };
+        addAssistantAndSpeak('No problem! Say "book appointment" to start again.');
+      } else {
+        addAssistantAndSpeak('Please say "yes" to confirm or "no" to cancel.');
+      }
+    }
+  };
+
+  // --- Confirm and create appointment ---
+  const confirmBooking = async () => {
+    if (!_user) {
+      addAssistantAndSpeak('Please sign in first to book appointments.', false);
+      return;
+    }
+    setIsProcessing(true);
+    const { title, date, time } = bookingRef.current;
+    try {
+      const startDate = new Date(`${date}T${time}:00`);
+      const endDate = new Date(startDate.getTime() + 30 * 60000);
+
+      const result = await createAppointment({
+        title,
+        start_time: startDate.toISOString(),
+        end_time: endDate.toISOString(),
+        status: 'scheduled',
+        priority: 'medium',
+        location: 'Online',
+        notes: 'Booked via Voice Command',
+      });
+
+      if (result.error) throw result.error;
+
+      bookingRef.current = { step: 'idle', title: '', date: '', time: '' };
+      addAssistantAndSpeak(`Appointment booked!\n\n📋 ${title}\n📅 ${formatDateDisplay(date)}\n🕐 ${formatTimeDisplay(time)}\n\nYou can view it in your Schedule. Say "book appointment" to book another.`, true);
+      toast.success('Appointment booked via voice!');
+      onAppointmentBooked?.(result.data);
+    } catch (err: any) {
+      console.error('Booking error:', err);
+      addAssistantAndSpeak(`Failed to book: ${err?.message || 'Unknown error'}. Please try again.`, true);
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  // --- Text input submit ---
+  const handleTextSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (textInput.trim()) {
+      // Stop listening while processing text
+      recognitionRef.current?.stop();
+      window.speechSynthesis?.cancel();
+      processCommand(textInput.trim());
+      setTextInput('');
+    }
+  };
 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed bottom-6 right-6 z-50 bg-white rounded-lg shadow-xl w-96 max-w-[90vw] overflow-hidden border border-gray-200">
-      <div className="bg-gradient-to-r from-indigo-600 to-indigo-500 p-4 text-white flex justify-between items-center">
-        <div className="flex items-center">
-          <div className={`w-3 h-3 rounded-full mr-2 ${isListening ? 'bg-green-400 animate-pulse' : 'bg-gray-300'}`}></div>
-          <h3 className="font-semibold text-lg">Voice Assistant</h3>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+      <div className="bg-gradient-to-br from-[#0f172a] via-[#131b2e] to-[#1a1a2e] rounded-2xl shadow-2xl w-full max-w-md border border-cyan-500/20 overflow-hidden flex flex-col" style={{ maxHeight: '85vh' }}>
+
+        {/* Header */}
+        <div className="bg-gradient-to-r from-cyan-500/20 to-blue-500/20 border-b border-cyan-500/10 px-5 py-4 flex items-center justify-between shrink-0">
+          <div className="flex items-center gap-3">
+            <div className={`w-3 h-3 rounded-full ${isListening ? 'bg-green-400 animate-pulse shadow-[0_0_8px_rgba(74,222,128,0.6)]' : 'bg-gray-500'}`} />
+            <h3 className="text-lg font-semibold bg-gradient-to-r from-cyan-300 to-blue-400 bg-clip-text text-transparent">
+              Voice Assistant
+            </h3>
+            {isListening && <span className="text-xs text-green-400 animate-pulse">Listening…</span>}
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => { setTtsEnabled(t => !t); window.speechSynthesis?.cancel(); }}
+              className="p-1.5 rounded-lg hover:bg-white/10 transition-colors text-gray-400 hover:text-white"
+              title={ttsEnabled ? 'Mute assistant' : 'Unmute assistant'}
+            >
+              {ttsEnabled ? <Volume2 size={16} /> : <VolumeX size={16} />}
+            </button>
+            <button onClick={() => { window.speechSynthesis?.cancel(); handleClose(); }} className="p-1.5 rounded-lg hover:bg-white/10 transition-colors text-gray-400 hover:text-white">
+              <X size={18} />
+            </button>
+          </div>
         </div>
-        <button 
-          onClick={handleClose}
-          className="p-1 rounded-full hover:bg-indigo-500/50 transition-colors"
-          aria-label="Close voice command"
-        >
-          <X size={20} />
-        </button>
-      </div>
-      
-      <div className="p-4">
-        <div className="mb-4 h-64 overflow-y-auto bg-gray-50 p-4 rounded-lg border border-gray-200">
-          {response ? (
-            <div className="space-y-3">
-              <div className="flex items-start">
-                <div className="bg-indigo-100 p-2 rounded-full mr-2">
-                  <svg className="w-4 h-4 text-indigo-600" fill="currentColor" viewBox="0 0 20 20">
-                    <path d="M2 5a2 2 0 012-2h7a2 2 0 012 2v4a2 2 0 01-2 2H9l-3 3v-3H4a2 2 0 01-2-2V5z" />
-                    <path d="M15 7v2a4 4 0 01-4 4H9.828l-1.766 1.767c.28.149.599.233.938.233h3l3 3v-3h1a2 2 0 002-2V9a2 2 0 00-2-2h-1z" />
-                  </svg>
-                </div>
-                <div className="bg-white p-3 rounded-lg shadow-sm border border-gray-200 flex-1">
-                  <p className="text-gray-800">{response}</p>
-                </div>
+
+        {/* Messages */}
+        <div className="flex-1 overflow-y-auto p-4 space-y-3 min-h-[250px]">
+          {messages.map((msg, i) => (
+            <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+              <div className={`max-w-[85%] px-4 py-2.5 rounded-2xl text-sm whitespace-pre-line leading-relaxed ${
+                msg.role === 'user'
+                  ? 'bg-gradient-to-r from-cyan-500 to-blue-500 text-black rounded-br-md'
+                  : 'bg-white/5 border border-white/10 text-gray-200 rounded-bl-md'
+              }`}>
+                {msg.text}
               </div>
             </div>
-          ) : (
-            <div className="flex items-center justify-center h-full text-center">
-              <div>
-                <div className="mx-auto w-12 h-12 bg-indigo-100 rounded-full flex items-center justify-center mb-2">
-                  <Mic className="text-indigo-500" size={20} />
-                </div>
-                <p className="text-gray-500">Say something like "Book an appointment" to get started.</p>
-              </div>
-            </div>
-          )}
-          
+          ))}
+
           {transcript && (
-            <div className="mt-4 pt-3 border-t border-gray-200">
-              <div className="flex items-center text-sm text-gray-500 mb-1">
-                <span className="inline-block w-2 h-2 rounded-full bg-green-500 mr-2"></span>
-                Listening...
+            <div className="flex justify-end">
+              <div className="max-w-[85%] px-4 py-2.5 rounded-2xl text-sm bg-cyan-500/20 border border-cyan-500/30 text-cyan-200 rounded-br-md">
+                🎤 {transcript}…
               </div>
-              <p className="text-gray-700 bg-gray-100 p-2 rounded">{transcript}</p>
             </div>
           )}
-          
-          {error && (
-            <div className="mt-3 p-3 bg-red-50 text-red-700 text-sm rounded-lg border border-red-100 flex items-start">
-              <svg className="w-4 h-4 mt-0.5 mr-2 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-              </svg>
-              <span>{error}</span>
+
+          {isProcessing && (
+            <div className="flex justify-start">
+              <div className="px-4 py-3 rounded-2xl bg-white/5 border border-white/10 rounded-bl-md flex items-center gap-2">
+                <div className="flex gap-1">
+                  <span className="w-2 h-2 bg-cyan-400 rounded-full animate-bounce" />
+                  <span className="w-2 h-2 bg-cyan-400 rounded-full animate-bounce" style={{ animationDelay: '0.15s' }} />
+                  <span className="w-2 h-2 bg-cyan-400 rounded-full animate-bounce" style={{ animationDelay: '0.3s' }} />
+                </div>
+                <span className="text-xs text-gray-400">Booking…</span>
+              </div>
             </div>
           )}
+          <div ref={messagesEndRef} />
         </div>
-        
-        <div className="space-y-3">
+
+        {error && (
+          <div className="mx-4 mb-2 px-3 py-2 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-xs shrink-0">
+            {error}
+          </div>
+        )}
+
+        {/* Input area */}
+        <div className="border-t border-cyan-500/10 p-4 space-y-3 shrink-0">
+          {/* Mic button — primary */}
           <button
             onClick={toggleListening}
             disabled={!isSupported || isProcessing}
-            className={`w-full flex items-center justify-center py-3 px-6 rounded-lg font-medium transition-colors ${
-              isListening 
-                ? 'bg-red-500 text-white hover:bg-red-600' 
-                : 'bg-indigo-600 text-white hover:bg-indigo-700'
-            } ${!isSupported ? 'opacity-50 cursor-not-allowed' : ''}`}
+            className={`w-full flex items-center justify-center py-3.5 rounded-xl font-medium text-sm transition-all ${
+              isListening
+                ? 'bg-gradient-to-r from-red-500/30 to-red-600/30 text-red-300 border border-red-500/40 hover:from-red-500/40 hover:to-red-600/40 shadow-[0_0_20px_rgba(239,68,68,0.2)]'
+                : 'bg-gradient-to-r from-cyan-500/20 to-blue-500/20 text-cyan-300 border border-cyan-500/30 hover:from-cyan-500/30 hover:to-blue-500/30 shadow-[0_0_20px_rgba(6,182,212,0.15)]'
+            } ${!isSupported ? 'opacity-40 cursor-not-allowed' : ''}`}
           >
             {isListening ? (
-              <>
-                <MicOff className="mr-2" size={18} />
-                Stop Listening
-              </>
+              <><MicOff className="mr-2" size={18} /> Stop Listening</>
             ) : (
-              <>
-                <Mic className="mr-2" size={18} />
-                {isProcessing ? 'Processing...' : 'Start Speaking'}
-              </>
+              <><Mic className="mr-2" size={18} /> {isSupported ? 'Tap to Speak' : 'Mic not supported'}</>
             )}
           </button>
-          
-          {!isSupported && (
-            <p className="text-sm text-red-600 text-center">
-              Your browser doesn't support speech recognition. Try using Chrome or Edge.
-            </p>
-          )}
-          
-          {isLoading && (
-            <div className="flex items-center justify-center space-x-2">
-              <div className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce"></div>
-              <div className="w-2 h-2 bg-indigo-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-              <div className="w-2 h-2 bg-indigo-600 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></div>
-              <span className="text-sm text-gray-500 ml-2">Loading voice recognition...</span>
-            </div>
-          )}
+
+          {/* Text input — fallback */}
+          <form onSubmit={handleTextSubmit} className="flex gap-2">
+            <input
+              type="text"
+              value={textInput}
+              onChange={e => setTextInput(e.target.value)}
+              placeholder="Or type here…"
+              className="flex-1 px-4 py-2.5 bg-white/5 border border-white/10 rounded-xl text-sm text-white placeholder-gray-500 focus:outline-none focus:border-cyan-400/50 transition-all"
+            />
+            <button type="submit" disabled={!textInput.trim() || isProcessing} className="px-3 py-2.5 bg-white/10 border border-white/10 rounded-xl text-gray-400 disabled:opacity-30 hover:text-white hover:bg-white/15 transition-all">
+              <Send size={16} />
+            </button>
+          </form>
         </div>
       </div>
     </div>
