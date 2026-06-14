@@ -1,6 +1,7 @@
 import React from 'react';
 import Sidebar from '../components/Sidebar';
 import Header from '../components/Header';
+import { Analytics } from "@vercel/analytics/react"
 
 const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => (
   <div className="main-layout flex min-h-screen bg-background">
@@ -9,6 +10,7 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => (
       <Header />
       <div className="content-area flex-1 p-8 bg-background">{children}</div>
     </div>
+    <Analytics />
   </div>
 );
 
