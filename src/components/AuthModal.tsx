@@ -103,7 +103,7 @@ const AuthModal = ({
       // Import supabase directly to call resetPasswordForEmail
       const { supabase } = await import('../utils/supabaseClient');
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/#type=recovery`,
+        redirectTo: `${window.location.origin}/reset-password`,
       });
       if (error) {
         throw error;
